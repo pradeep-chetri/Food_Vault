@@ -1,0 +1,1 @@
+from .routes.recipe import recipe_router
