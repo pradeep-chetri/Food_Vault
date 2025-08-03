@@ -1,14 +1,20 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel
+from typing import List
 
-class Recipe(BaseModel):
-    id: int
+class RecipeBase(BaseModel):
     title: str
-    image: Optional[str] = None
-    description: Optional[str] = None
-    tags: List[str] = Field(default_factory=list)
+    image_url: str
+    description: str
+    tags: List[str]
     author: str
-    isBookmarked: bool = False
 
-    class Config:
-        from_attributes = True
+class RecipeCreate(RecipeBase):
+    pass
+
+class RecipeUpdate(RecipeBase):
+    pass
+
+class Recipe(RecipeBase):
+    id: int
+
+

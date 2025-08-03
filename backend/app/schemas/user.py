@@ -16,6 +16,6 @@ class UserLogin(BaseModel):
 
 # Output model (public view)
 class UserPublic(UserBase):
-    id: int
+    pass
 
 

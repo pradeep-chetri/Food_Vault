@@ -14,7 +14,7 @@ def signup(data: UserCreate):
         if isinstance(success, dict) and "error" in success:
             raise HTTPException(status_code=400, detail=success["error"])
 
-        return UserPublic(name=data.name, email=data.email, id=)
+        return UserPublic(name=data.name, email=data.email)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

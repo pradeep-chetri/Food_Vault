@@ -1,5 +1,9 @@
 from pydantic import BaseModel
 
 class Bookmark(BaseModel):
-    user_id: int
+    email: str
+
+class BookmarkPublic(Bookmark):
+    pass
+class BookmarkCreate(Bookmark):
     recipe_id: int

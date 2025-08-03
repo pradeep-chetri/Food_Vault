@@ -1,38 +1,36 @@
-import { useEffect, useState } from 'react';
-import RecipeGrid from '../components/Home/RecipeGrid';
-import type { recipeCardDataType } from "../types/recipeCardDataType";
-import { fetchRecipeData } from "../lib/recipeData";
-import HeroComponent from '../components/Home/HeroComponent';
+import { useState, useEffect } from 'react';
+import HeroComponent from '../components/HeroComponent';
+import RecipeGrid from '../components/RecipeGrid';
+import { useRecipes } from '../hooks/useRecipes';
 
-function Home() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [recipeCardData, setRecipeCardData] = useState<recipeCardDataType[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+export default function Home() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { recipes, loading, error } = useRecipes();
 
+  // 🔹 Debounce search input for smoother filtering
   useEffect(() => {
-    const fetchRecipes = async () => {
-      try {
-        const data = await fetchRecipeData();
-        setRecipeCardData(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
+    const handler = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
-    fetchRecipes();
-  }, []);
-
-  const filteredRecipes = recipeCardData.filter(recipe =>
-    recipe.title.toLowerCase().includes(searchTerm.toLowerCase())
+  // 🔹 Filter recipes based on debounced search
+  const filteredRecipes = recipes.filter(recipe =>
+    recipe.title.toLowerCase().includes(debouncedSearch.toLowerCase())
   );
+
+  // 🔹 Optional: Preload images for better UX
+  useEffect(() => {
+    recipes.forEach(recipe => {
+      const img = new Image();
+      img.src = recipe.image_url;
+    });
+  }, [recipes]);
 
   if (loading) {
     return (
       <div className="text-blue-500 flex w-full min-h-screen justify-center items-center font-bold">
-        <h1>Loading...</h1>
+        <h1>Loading recipes...</h1>
       </div>
     );
   }
@@ -47,11 +45,15 @@ function Home() {
 
   return (
     <>
-      <div className="p-6" />
       <HeroComponent searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
-      <RecipeGrid recipes={filteredRecipes} />
+
+      {filteredRecipes.length === 0 ? (
+        <p className="text-center mt-10 text-gray-500">
+          No recipes found for "<span className="font-semibold">{debouncedSearch}</span>"
+        </p>
+      ) : (
+        <RecipeGrid recipes={filteredRecipes} />
+      )}
     </>
   );
 }
-
-export default Home;

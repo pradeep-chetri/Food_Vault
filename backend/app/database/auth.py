@@ -1,8 +1,8 @@
 import sqlite3
+from .initDB import conn
 
-conn = sqlite3.connect("data/user.sqlite", check_same_thread=False)
 
-def dbInit():
+def usertableInit():
     with conn:
         conn.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -13,8 +13,8 @@ def dbInit():
         )
         """)
 
-# Initialize once
-dbInit()
+# Initialize the table once
+usertableInit()
 
 def addUser(name, email, password):
     try:
