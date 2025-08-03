@@ -8,7 +8,7 @@
 
 ## 🌍 Live Demo
 
-🔗 [https://foodvault.example.com](https://foodvault.example.com)
+*🔗 Will be hosted soon after some updates *
 
 ---
 
