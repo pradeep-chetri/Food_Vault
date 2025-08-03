@@ -1,6 +1,5 @@
 $frontendPath = ".\frontend"
 $backendPath  = ".\backend"
-$venvActivate = Join-Path $backendPath "\venv\Scripts\Activate.ps1"
 $frontendPort = 5173
 $localhostURL = "http://localhost:$frontendPort"
 
