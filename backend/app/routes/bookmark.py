@@ -1,35 +1,34 @@
-from fastapi import APIRouter, HTTPException
-from app.schemas.bookmark import BookmarkCreate
-from app.schemas.recipe import Recipe
-from app.database.bookmarks import addBookmark, removeBookmark, getBookmarksByEmail
-from pydantic import EmailStr
+from fastapi import APIRouter, HTTPException, Depends
+from app.schemas import BookmarkCreate, UserPublic, Recipe
+from app.database import addBookmark, removeBookmark, getBookmarksByEmail
+from app.utils import get_current_user  # ✅ Auth dependency
 
 router = APIRouter(prefix="/bookmarks", tags=["Bookmark"])
 
-# 🔹 GET /bookmarks?email=xyz@example.com
+# 🔹 GET /bookmarks
 @router.get("", response_model=list[Recipe])
-def get_bookmarks(email: EmailStr):
+def get_bookmarks(user: UserPublic = Depends(get_current_user)):
     try:
-        return getBookmarksByEmail(email)
+        return getBookmarksByEmail(user.email)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # 🔹 POST /bookmarks/add
 @router.post("/add", status_code=201)
-def add_bookmark(data: BookmarkCreate):
+def add_bookmark(data: BookmarkCreate, user: UserPublic = Depends(get_current_user)):
     try:
-        addBookmark(data.email, data.recipe_id)
+        addBookmark(user.email, data.recipe_id)
         return {"message": "Bookmark successfully added", "error": None}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 🔹 DELETE /bookmarks/delete?email=...&recipe_id=...
+# 🔹 DELETE /bookmarks/delete?recipe_id=...
 @router.delete("/delete")
-def delete_bookmark(email: str, recipe_id: int):
+def delete_bookmark(recipe_id: int, user: UserPublic = Depends(get_current_user)):
     try:
-        removeBookmark(email, recipe_id)
+        removeBookmark(user.email, recipe_id)
         return {"message": "Bookmark successfully removed", "error": None}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

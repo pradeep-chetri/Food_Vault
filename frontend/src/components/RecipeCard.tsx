@@ -27,7 +27,7 @@ export default function RecipeCard({
   const handleClick = async () => {
     if (!user) return;
     toggleBookmark(id);
-    await toggleBookmarkAPI(user.email, id, isBookmarked);
+    await toggleBookmarkAPI( id, isBookmarked);
   };
 
   return (

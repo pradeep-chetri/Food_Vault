@@ -1,3 +1,4 @@
+from ast import List
 from pydantic import BaseModel, EmailStr, Field
 
 # Shared base
@@ -18,4 +19,9 @@ class UserLogin(BaseModel):
 class UserPublic(UserBase):
     pass
 
+class AccessToken(BaseModel):
+    access_token: str
+    token_type: str
+    user: UserBase
+    
 

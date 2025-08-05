@@ -1,40 +1,60 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import type { SignUP } from '../../types/usersType';
-import axios from 'axios';
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import type { SignUP } from "../../types/usersType";
+import axios from "axios";
 import { useUser } from "../../context/UserDataContext";
 
 export default function SignUp() {
-  const { setUser } = useUser()
+  const { setUser } = useUser();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<SignUP>({
     name: "",
     email: "",
-    password: ""
-  })
+    password: "",
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const {name, value} = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-  }
+  };
 
   const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  try {
-    const response = await axios.post("http://localhost:8000/api/auth/signup", formData);
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/api/auth/signup",
+        formData
+      );
 
-    setUser(response.data) // assuming { name, email } is returned from the API
-    navigate("/"); 
+      // ✅ Save JWT token
+      localStorage.setItem("token", response.data.access_token);
 
-  } catch (error: any) {
-    console.error('Error during sign up:', error.response?.data || error.message);
-  }
-}
+      // ✅ Set default axios header
+      axios.defaults.headers.common[
+        "Authorization"
+      ] = `Bearer ${response.data.access_token}`;
 
+      // ✅ Get user info
+      const me = await axios.get("/auth/me", {
+        headers: { Authorization: `Bearer ${response.data.access_token}` },
+      });
+
+      // ✅ Set user context
+      setUser(me.data);
+
+      // ✅ Redirect
+      navigate("/");
+    } catch (error: any) {
+      console.error(
+        "Error during sign up:",
+        error.response?.data || error.message
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 text-black bg-white">
@@ -59,7 +79,7 @@ export default function SignUp() {
             </label>
             <input
               type="text"
-              name='name'
+              name="name"
               id="email"
               className="w-full px-4 py-3 border border-gray-300 rounded-2xl shadow-sm focus:outline-none 
               focus:ring-2 focus:ring-amber-400 transition duration-200 placeholder:text-gray-400"
@@ -77,7 +97,7 @@ export default function SignUp() {
             </label>
             <input
               type="email"
-              name='email'
+              name="email"
               id="email"
               className="w-full px-4 py-3 border border-gray-300 rounded-2xl shadow-sm focus:outline-none 
               focus:ring-2 focus:ring-amber-400 transition duration-200 placeholder:text-gray-400"
@@ -97,7 +117,7 @@ export default function SignUp() {
             </label>
             <input
               type="password"
-              name='password'
+              name="password"
               id="password"
               className="w-full px-4 py-3 border border-gray-300 rounded-2xl shadow-sm focus:outline-none 
               focus:ring-2 focus:ring-amber-400 transition duration-200 placeholder:text-gray-400"
@@ -119,7 +139,10 @@ export default function SignUp() {
 
         <p className="mt-6 text-sm text-center text-gray-500">
           Already a member?{" "}
-          <Link to="/auth/login" className="text-lime-600 font-medium hover:underline">
+          <Link
+            to="/auth/login"
+            className="text-lime-600 font-medium hover:underline"
+          >
             Log in
           </Link>
         </p>

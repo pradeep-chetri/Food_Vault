@@ -1,38 +1,54 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useUser } from '../../context/UserDataContext';
-import type { Login } from '../../types/usersType';
-import { useState, type ChangeEvent, type FormEvent } from 'react';
-import axios from 'axios';
+import { Link, useNavigate } from "react-router-dom";
+import { useUser } from "../../context/UserDataContext";
+import type { Login } from "../../types/usersType";
+import { useState, type ChangeEvent, type FormEvent } from "react";
+import axios from "axios";
 
 export default function Login() {
   const { setUser } = useUser();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<Login>({
-      email: "",
-      password: ""
-    })
+    email: "",
+    password: "",
+  });
+
+  const API = axios.create({
+  baseURL: "http://localhost:8000/api/auth",
+});
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-      const {name, value} = e.target;
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
   const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
     try {
-      const response = await axios.post("http://localhost:8000/api/auth/login", formData);
+      const response = await API.post(
+        "/login",
+        formData
+      );
 
-    setUser(response.data) // assuming { name, email } is returned from the API
-    navigate("/"); // redirect to dashboard or home page after login
+      localStorage.setItem("token", response.data.access_token);
 
-  } catch (error: any) {
-    console.error('Error during login:', error.response?.data || error.message);
-  }
-}
+      const me = await axios.get("/me", {
+        headers: { Authorization: `Bearer ${response.data.access_token}` },
+      });
+
+      setUser(me.data);
+
+      navigate("/"); // redirect to dashboard or home page after login
+    } catch (error: any) {
+      console.error(
+        "Error during login:",
+        error.response?.data || error.message
+      );
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 text-black bg-white">
@@ -87,7 +103,10 @@ export default function Login() {
           </div>
 
           <div className="flex justify-end">
-            <Link to="/forgotpassword" className="text-sm text-lime-600 hover:underline">
+            <Link
+              to="/forgotpassword"
+              className="text-sm text-lime-600 hover:underline"
+            >
               Forgot password?
             </Link>
           </div>
@@ -102,7 +121,10 @@ export default function Login() {
 
         <p className="mt-6 text-sm text-center text-gray-500">
           Don`t have an account?{" "}
-          <Link to="/auth/signup" className="text-lime-600 font-medium hover:underline">
+          <Link
+            to="/auth/signup"
+            className="text-lime-600 font-medium hover:underline"
+          >
             Sign up
           </Link>
         </p>

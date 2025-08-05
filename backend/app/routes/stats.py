@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.database.stats import fetch_stats
+from app.database import fetch_stats
 
 router = APIRouter(tags=["Stats"])
 

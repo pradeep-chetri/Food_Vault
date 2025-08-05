@@ -1,8 +1,8 @@
 from typing import List
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from app.schemas.recipe import Recipe, RecipeCreate
-from app.database.recipe import get_all_recipes, create_recipe, create_recipes_bulk
+from app.schemas import Recipe, RecipeCreate
+from app.database import get_all_recipes, create_recipe, create_recipes_bulk
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 

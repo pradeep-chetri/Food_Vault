@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react"
+import axios from "axios"
 
 type User = {
   name: string
@@ -15,16 +16,30 @@ const UserContext = createContext<UserContextType | undefined>(undefined)
 export const UserProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUserState] = useState<User | null>(null)
 
-  // Sync to localStorage
+  // Load user from /auth/me using token in localStorage
   useEffect(() => {
-    const stored = localStorage.getItem("user")
-    if (stored) setUserState(JSON.parse(stored))
+    const token = localStorage.getItem("token")
+
+    if (!token) return
+
+    axios.get("http://localhost:8000/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+    .then(res => {
+      setUserState(res.data)
+    })
+    .catch(err => {
+      console.error("Failed to fetch user:", err)
+      localStorage.removeItem("token")
+      setUserState(null)
+    })
   }, [])
 
+  // Use only in-memory context; don't persist to localStorage
   const setUser = (user: User | null) => {
     setUserState(user)
-    if (user) localStorage.setItem("user", JSON.stringify(user))
-    else localStorage.removeItem("user")
   }
 
   return (

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException
-from app.schemas.user import UserCreate, UserPublic, UserLogin
-from app.database.auth import addUser, getUserByEmail
-from app.utils.security import hash_password, verify_password
+from fastapi import APIRouter, HTTPException, Depends
+from app.schemas import UserCreate, UserPublic, UserLogin, AccessToken
+from app.database import addUser, getUserByEmail
+from app.utils import hash_password, verify_password , create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -19,7 +19,7 @@ def signup(data: UserCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/login", response_model=UserPublic)
+@router.post("/login", response_model=AccessToken)
 def login(data: UserLogin):
     try:
         user = getUserByEmail(data.email)
@@ -27,7 +27,20 @@ def login(data: UserLogin):
         if not user or not verify_password(data.password, user["hashed_password"]):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        return UserPublic(name=user["name"], email=user["email"])
+        token = create_access_token({"sub": user["email"]})
+        
+        return {
+            "access_token": token, 
+            "token_type": "bearer", 
+            "user": {
+                "name": user["name"], 
+                "email": user["email"]
+                }
+            }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/me", response_model=UserPublic)
+def get_me(user: dict = Depends(get_current_user)):
+    return user

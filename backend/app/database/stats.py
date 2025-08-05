@@ -5,13 +5,16 @@ def fetch_stats():
         cursor = conn.cursor()
 
         cursor.execute("SELECT COUNT(*) FROM recipes")
-        total_recipes: int = cursor.fetchone()[0]
+        row_recipes = cursor.fetchone()[0]
+        total_recipes: int = row_recipes if row_recipes is not None else 0
 
         cursor.execute("SELECT COUNT(*) FROM users")
-        total_users: int = cursor.fetchone()[0]
+        row_users = cursor.fetchone()[0]
+        total_users: int = row_users if row_users is not None else 0
 
         cursor.execute("SELECT COUNT(*) FROM bookmarks")
-        total_bookmarks: int = cursor.fetchone()[0]
+        row_bookmarks = cursor.fetchone()[0]
+        total_bookmarks: int = row_bookmarks if row_bookmarks is not None else 0
 
         return {
             "total_recipes": total_recipes,
