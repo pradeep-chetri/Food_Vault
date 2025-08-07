@@ -1,9 +1,23 @@
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
+import { X, Plus, Trash2 } from "lucide-react";
 import { useUser } from "../context/UserDataContext";
-import { X } from "lucide-react";
-import { motion } from "framer-motion";
-import { submitNewRecipe } from "../lib/api/recipe";
-import type { recipeCreateDataType } from "../types/recipeType";
+import { capitalize } from "../utils/format";
+import { PREDEFINED_TAGS } from "../constant/Tags_Info";
+
+
+interface RecipeFormData {
+  title: string;
+  image_url: string;
+  description: string;
+  tags: string[];
+  author: string;
+  ingredients: string[];
+  instructions: string[];
+  prepTime: number;
+  cookTime: number;
+  servings: number;
+  difficulty: "Easy" | "Medium" | "Hard";
+}
 
 interface RecipeFormModalProps {
   isOpen: boolean;
@@ -14,194 +28,439 @@ export default function RecipeFormModal({
   isOpen,
   onClose,
 }: RecipeFormModalProps) {
-  const { user } = useUser();
-
-  const [formData, setFormData] = useState<recipeCreateDataType>({
+  const { user } = useUser()
+  const [formData, setFormData] = useState<RecipeFormData>({
     title: "",
     image_url: "",
     description: "",
     tags: [],
     author: user?.name || "Anonymous",
+    ingredients: [""],
+    instructions: [""],
+    prepTime: 15,
+    cookTime: 30,
+    servings: 4,
+    difficulty: "Medium",
   });
-
-  const [tagInput, setTagInput] = useState<string>("");
 
   if (!isOpen) return null;
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: name === "prepTime" || name === "cookTime" || name === "servings" 
+        ? parseInt(value) || 0 
+        : value 
+    }));
   };
 
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
-      e.preventDefault();
-      if (!formData.tags.includes(tagInput.trim())) {
-        setFormData((prev) => ({
-          ...prev,
-          tags: [...prev.tags, tagInput.trim()],
-        }));
-      }
-      setTagInput("");
-    } else if (e.key === "Backspace" && !tagInput) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: prev.tags.slice(0, -1),
-      }));
-    }
+  const toggleTag = (tagName: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.includes(tagName)
+        ? prev.tags.filter((tag) => tag !== tagName)
+        : [...prev.tags, tagName],
+    }));
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const getTagColor = (tagName: string) => {
+    const predefinedTag = PREDEFINED_TAGS.find((tag) => tag.name === tagName);
+    return predefinedTag?.color || "bg-gray-100 text-gray-700 border-gray-200";
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+    }));
+  };
+
+  const addIngredient = () => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: [...prev.ingredients, ""],
+    }));
+  };
+
+  const removeIngredient = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateIngredient = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      ingredients: prev.ingredients.map((ing, i) => i === index ? value : ing),
+    }));
+  };
+
+  const addInstruction = () => {
+    setFormData((prev) => ({
+      ...prev,
+      instructions: [...prev.instructions, ""],
+    }));
+  };
+
+  const removeInstruction = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      instructions: prev.instructions.filter((_, i) => i !== index),
+    }));
+  };
+
+  const updateInstruction = (index: number, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      instructions: prev.instructions.map((inst, i) => i === index ? value : inst),
+    }));
+  };
+
+  const handleSubmit = () => {
+    // Filter out empty ingredients and instructions
+    const cleanedData = {
+      ...formData,
+      ingredients: formData.ingredients.filter(ing => ing.trim() !== ""),
+      instructions: formData.instructions.filter(inst => inst.trim() !== ""),
+    };
+
     try {
-      const res = await submitNewRecipe(formData);
-
+      console.log("Submitting recipe:", cleanedData);
+      
+      // Reset form
       setFormData({
         title: "",
         image_url: "",
         description: "",
         tags: [],
         author: user?.name || "Anonymous",
+        ingredients: [""],
+        instructions: [""],
+        prepTime: 15,
+        cookTime: 30,
+        servings: 4,
+        difficulty: "Medium",
       });
-      console.log("Successfully Added the Recipe to the database");
-    } catch (error: any) {
-      console.error(
-        "Error during adding the new recipe:",
-        error.response?.data || error.message
-      );
+
+      onClose();
+    } catch (error) {
+      console.error("Error adding recipe:", error);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0, y: -30, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -20, scale: 0.95 }}
-        transition={{ duration: 0.2 }}
-        className="w-full max-w-xl bg-white rounded-2xl shadow-2xl p-8 relative border border-zinc-200"
-      >
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="w-full max-w-4xl bg-white no-scrollbar rounded-2xl shadow-2xl relative border border-zinc-200 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 transition"
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 transition z-10 bg-white/80 backdrop-blur-sm rounded-full p-2"
         >
           <X size={20} />
         </button>
 
-        {/* Header */}
-        <h2 className="text-2xl font-bold text-zinc-800 mb-6">
-          🍲 Add New Recipe
-        </h2>
+        <div className="p-8">
+          {/* Header */}
+          <h2 className="text-3xl font-bold text-zinc-800 mb-8 text-center">
+            🍲 Add New Recipe
+          </h2>
 
-        {/* Form */}
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              Title
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl px-4 py-2.5 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"
-            />
-          </div>
+          {/* Form */}
+          <div className="space-y-8">
+            {/* Basic Info Section */}
+            <div className="bg-gray-50 rounded-2xl p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-zinc-700 mb-4">Basic Information</h3>
+              
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Recipe Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  placeholder="Enter recipe title..."
+                />
+              </div>
 
-          {/* Image URL */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              Image URL
-            </label>
-            <input
-              type="text"
-              name="image_url"
-              value={formData.image_url}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl px-4 py-2.5 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"
-            />
-          </div>
+              {/* Image URL */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Image URL
+                </label>
+                <input
+                  type="text"
+                  name="image_url"
+                  value={formData.image_url}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              Description
-            </label>
-            <textarea
-              name="description"
-              rows={4}
-              value={formData.description}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl px-4 py-2.5 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"
-            />
-          </div>
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  rows={4}
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  placeholder="Describe your recipe..."
+                />
+              </div>
 
-          {/* Tags */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              Tags{" "}
-              <span className="text-xs text-zinc-400">
-                (press Enter or comma)
-              </span>
-            </label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {formData.tags.map((tag, i) => (
-                <span
-                  key={i}
-                  className="bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full shadow-sm"
-                >
-                  {tag}
-                </span>
-              ))}
+              {/* Author (Read Only) */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Author
+                </label>
+                <input
+                  type="text"
+                  value={formData.author}
+                  readOnly
+                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-zinc-100 text-zinc-500 cursor-not-allowed text-sm"
+                />
+              </div>
             </div>
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={handleTagKeyDown}
-              placeholder="Add a tag and press Enter..."
-              className="w-full rounded-xl px-4 py-2.5 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm"
-            />
-          </div>
 
-          {/* Author (Read Only) */}
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-1">
-              Author
-            </label>
-            <input
-              type="text"
-              value={formData.author}
-              readOnly
-              className="w-full rounded-xl px-4 py-2.5 border border-zinc-300 bg-zinc-100 text-zinc-500 cursor-not-allowed text-sm"
-            />
-          </div>
+            {/* Recipe Details Section */}
+            <div className="bg-gray-50 rounded-2xl p-6 space-y-6">
+              <h3 className="text-lg font-semibold text-zinc-700 mb-4">Recipe Details</h3>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Prep Time */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Prep Time (min)
+                  </label>
+                  <input
+                    type="number"
+                    name="prepTime"
+                    value={formData.prepTime}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  />
+                </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 transition text-sm"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white transition text-sm"
-            >
-              Save Recipe
-            </button>
+                {/* Cook Time */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Cook Time (min)
+                  </label>
+                  <input
+                    type="number"
+                    name="cookTime"
+                    value={formData.cookTime}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  />
+                </div>
+
+                {/* Servings */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Servings
+                  </label>
+                  <input
+                    type="number"
+                    name="servings"
+                    value={formData.servings}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  />
+                </div>
+
+                {/* Difficulty */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Difficulty
+                  </label>
+                  <select
+                    name="difficulty"
+                    value={formData.difficulty}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Ingredients Section */}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-zinc-700">Ingredients</h3>
+                <button
+                  type="button"
+                  onClick={addIngredient}
+                  className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition text-sm"
+                >
+                  <Plus size={16} />
+                  Add Ingredient
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {formData.ingredients.map((ingredient, index) => (
+                  <div key={index} className="flex gap-3">
+                    <input
+                      type="text"
+                      value={ingredient}
+                      onChange={(e) => updateIngredient(index, e.target.value)}
+                      placeholder={`Ingredient ${index + 1}...`}
+                      className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                    />
+                    {formData.ingredients.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeIngredient(index)}
+                        className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Instructions Section */}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-zinc-700">Instructions</h3>
+                <button
+                  type="button"
+                  onClick={addInstruction}
+                  className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition text-sm"
+                >
+                  <Plus size={16} />
+                  Add Step
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {formData.instructions.map((instruction, index) => (
+                  <div key={index} className="flex gap-3">
+                    <div className="flex-shrink-0 w-8 h-8 bg-orange-500 text-white text-sm font-bold rounded-full flex items-center justify-center mt-2">
+                      {index + 1}
+                    </div>
+                    <textarea
+                      value={instruction}
+                      onChange={(e) => updateInstruction(index, e.target.value)}
+                      placeholder={`Step ${index + 1} instructions...`}
+                      rows={3}
+                      className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                    />
+                    {formData.instructions.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeInstruction(index)}
+                        className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition mt-2"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tags Section */}
+            <div className="bg-gray-50 rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-zinc-700 mb-4">Tags</h3>
+              
+              {/* Selected Tags Display */}
+              {formData.tags.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Selected Tags
+                  </label>
+                  <div className="flex flex-wrap gap-2 p-3 bg-white rounded-xl border border-zinc-200">
+                    {formData.tags.map((tag, i) => (
+                      <span
+                        key={i}
+                        className={`${getTagColor(tag)} text-xs px-3 py-1.5 rounded-full border cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
+                        onClick={() => removeTag(tag)}
+                      >
+                        {tag}
+                        <X size={12} className="opacity-60 hover:opacity-100" />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tag Selection */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Choose Tags{" "}
+                  <span className="text-xs text-zinc-400">
+                    (click to select/deselect)
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-4 bg-white rounded-xl border border-zinc-200 max-h-48 overflow-y-auto">
+                  {PREDEFINED_TAGS.map((tag) => (
+                    <button
+                      key={tag.name}
+                      type="button"
+                      onClick={() => toggleTag(tag.name)}
+                      className={`${tag.color} text-xs px-3 py-2 rounded-lg border transition-all duration-200 hover:scale-105 ${
+                        formData.tags.includes(tag.name)
+                          ? "ring-2 ring-lime-400 ring-offset-1 shadow-md"
+                          : "hover:shadow-sm"
+                      }`}
+                    >
+                      {capitalize(tag.name)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-8 py-3 rounded-xl bg-zinc-200 hover:bg-zinc-300 transition text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="px-8 py-3 rounded-xl bg-lime-500 hover:bg-lime-600 text-white transition text-sm font-medium shadow-lg hover:shadow-xl"
+              >
+                Save Recipe
+              </button>
+            </div>
           </div>
-        </form>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -5,7 +5,7 @@ from app.utils import hash_password, verify_password , create_access_token, get_
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-@router.post("/signup", response_model=UserPublic)
+@router.post("/signup", response_model=AccessToken)
 def signup(data: UserCreate):
     try:
         hashed_pw = hash_password(data.password)
@@ -14,7 +14,16 @@ def signup(data: UserCreate):
         if isinstance(success, dict) and "error" in success:
             raise HTTPException(status_code=400, detail=success["error"])
 
-        return UserPublic(name=data.name, email=data.email)
+        token = create_access_token({"sub": data.email})
+        
+        return {
+            "access_token": token, 
+            "token_type": "bearer", 
+            "user": {
+                "name": data.name, 
+                "email": data.email
+                }
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

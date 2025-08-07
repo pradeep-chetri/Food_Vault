@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useStats } from "../hooks/useStats";
 
-
 interface SearchBarProps {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -15,7 +14,7 @@ export default function HeroComponent({
   setSearchTerm,
 }: SearchBarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { stats, loading, error } = useStats()
+  const { stats, loading } = useStats();
 
   const handleOpenModel = () => setIsOpen(true);
 
@@ -27,22 +26,25 @@ export default function HeroComponent({
       </div>
 
       {/* Hero Title */}
-      <div className="text-center max-w-2xl space-y-4">
-        <h1 className="text-3xl md:text-4xl font-semibold text-zinc-800 leading-snug tracking-tight">
+      <div className="text-center max-w-3xl space-y-6 relative z-10">
+        <h1 className="text-4xl md:text-6xl font-bold text-gray-800 leading-tight">
           Welcome to{" "}
-          <span className="text-lime-600">
-            <span className="bg-amber-500 text-white px-3 py-1 rounded-full shadow-sm text-3xl font-[Dancing Script]">
+          <span className="relative inline-block">
+            <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 rounded-2xl shadow-lg transform -rotate-1 inline-block font-['Dancing_Script'] text-4xl md:text-6xl">
               Food
-            </span>{" "}
+            </span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></span>
+          </span>{" "}
+          <span className="bg-gradient-to-r from-lime-600 to-green-600 bg-clip-text text-transparent">
             Vault
           </span>
         </h1>
-        <p className="text-base md:text-lg text-gray-600 mt-2 leading-relaxed tracking-wide">
-          Discover, create, and share mouth-watering recipes. Build your personal collection of
-          culinary gems and explore the world of flavors.
+        <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-2xl mx-auto">
+          Discover, create, and share mouth-watering recipes. Build your
+          personal collection of culinary gems and explore the world of flavors
+          with our growing community.
         </p>
       </div>
-
       {/* Search Bar */}
       <div className="w-full max-w-xl mt-8 relative">
         <div className="relative">
@@ -58,22 +60,31 @@ export default function HeroComponent({
       </div>
 
       {/* Stats Section */}
-      {!loading? (
+      {!loading ? (
         <div className="grid grid-cols-3 gap-8 mt-10 max-w-md w-full text-center">
-        {[
-          { value: stats?.total_recipes, label: "Recipes" },
-          { value: stats?.total_users, label: "Users" },
-          { value: stats?.total_bookmarks, label: "Bookmarks"}
-        ].map((stat, i) => (
-          <div key={i} className="space-y-1">
-            <div className="text-2xl font-bold text-gray-800">{stat.value}</div>
-            <div className="text-sm text-gray-500">{stat.label}</div>
-          </div>
-        ))}
-      </div>
-      ): (
+          {[
+            { value: stats?.total_recipes, label: "Recipes" },
+            { value: stats?.total_users, label: "Users" },
+            { value: stats?.total_bookmarks, label: "Bookmarks" },
+          ].map((stat, i) => (
+            <div key={i} className="space-y-1">
+              <div className="text-2xl font-bold text-gray-800">
+                {stat.value}
+              </div>
+              <div className="text-sm text-gray-500">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
         <div className="text-blue-500">Loading...</div>
       )}
+
+      <div className="mt-8 text-center relative z-10">
+        <p className="text-gray-500 text-sm">
+          Join our community of food enthusiasts and start your culinary journey
+          today!
+        </p>
+      </div>
 
       {/* Modal */}
       <RecipeFormModal isOpen={isOpen} onClose={() => setIsOpen(false)} />

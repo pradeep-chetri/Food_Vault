@@ -6,21 +6,24 @@ from app.database import get_all_recipes, create_recipe, create_recipes_bulk
 
 router = APIRouter(prefix="/recipes", tags=["Recipes"])
 
+
 @router.get("/", response_model=List[Recipe], summary="Get all recipes with tags")
 def get_recipes():
-    """Returns a list of all recipes along with their tags."""
-    return get_all_recipes()
+    try:
+        return get_all_recipes()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/add", summary="Add recipe with tags", status_code=201)
+
+@router.post("/add", summary="Add a single recipe", status_code=201)
 def add_recipe(data: RecipeCreate):
-    """Add new recipe to the collection."""
     try:
         create_recipe(
-            data.title,
-            data.image_url,
-            data.description,
-            data.author,
-            data.tags
+            title=data.title,
+            image_url=data.image_url,
+            description=data.description,
+            author=data.author,
+            tags=data.tags
         )
         return JSONResponse(status_code=201, content={
             "message": "Recipe successfully added",
@@ -29,12 +32,11 @@ def add_recipe(data: RecipeCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/bulk", summary="Add multiple recipes", status_code=201)
 def add_recipes_bulk(data: List[RecipeCreate]):
     try:
-        # convert pydantic models to dicts
-        recipes = [recipe.model_dump() for recipe in data]
-        create_recipes_bulk(recipes)
+        create_recipes_bulk([recipe.model_dump() for recipe in data])
         return JSONResponse(status_code=201, content={
             "message": f"{len(data)} recipes added successfully",
             "error": None

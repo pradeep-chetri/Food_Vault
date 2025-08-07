@@ -1,0 +1,145 @@
+[
+  {
+    "id": 1,
+    "title": "Spicy Chicken Curry",
+    "image_url": "/spicy-chicken-curry.jpg",
+    "description": "A flavorful and aromatic dish made with tender chicken, rich spices, and a creamy base. Perfect for dinner with rice or naan.",
+    "author": "wweqqweqwe",
+    "tags": [
+      "spicy",
+      "savory",
+      "non-veg",
+      "sour"
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Vegetable Stir Fry",
+    "image_url": "/vegetable-stir-fry.jpg",
+    "description": "A quick and easy stir fry packed with colorful vegetables and a savory sauce.",
+    "author": "you",
+    "tags": [
+      "savory",
+      "sour",
+      "umami",
+      "salty"
+    ]
+  },
+  {
+    "id": 3,
+    "title": "Classic Beef Tacos",
+    "image_url": "/beef-tacos.jpg",
+    "description": "Delicious beef tacos with fresh toppings and a zesty salsa. Perfect for a casual meal.",
+    "author": "you",
+    "tags": [
+      "spicy",
+      "savory",
+      "sour",
+      "umami",
+      "salty"
+    ]
+  },
+  {
+    "id": 4,
+    "title": "Margherita Pizza",
+    "image_url": "/margherita-pizza.jpg",
+    "description": "An Italian classic with fresh mozzarella, tomato sauce, and basil on a crispy crust.",
+    "author": "you",
+    "tags": [
+      "savory",
+      "fatty",
+      "umami",
+      "salty"
+    ]
+  },
+  {
+    "id": 5,
+    "title": "Grilled Salmon with Lemon",
+    "image_url": "/grilled-salmon.jpg",
+    "description": "Perfectly grilled salmon fillets seasoned with herbs and finished with fresh lemon juice.",
+    "author": "van",
+    "tags": [
+      "savory",
+      "fatty",
+      "sour",
+      "umami"
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Paneer Butter Masala",
+    "image_url": "/paneer-butter-masala.jpg",
+    "description": "Rich and creamy North Indian curry made with paneer cubes simmered in a buttery tomato gravy.",
+    "author": "van",
+    "tags": [
+      "savory",
+      "fatty",
+      "umami",
+      "sweet"
+    ]
+  },
+  {
+    "id": 7,
+    "title": "Egg Fried Rice",
+    "image_url": "/egg-fried-rice.jpg",
+    "description": "Quick and tasty fried rice tossed with scrambled eggs, veggies, and soy sauce.",
+    "author": "van",
+    "tags": [
+      "savory",
+      "fatty",
+      "umami",
+      "salty"
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Thai Green Curry",
+    "image_url": "/thai-green-curry.jpg",
+    "description": "A spicy Thai curry made with green curry paste, coconut milk, vegetables, and your choice of protein.",
+    "author": "van",
+    "tags": [
+      "spicy",
+      "savory",
+      "fatty",
+      "sour",
+      "umami",
+      "herby"
+    ]
+  },
+  {
+    "id": 9,
+    "title": "Avocado Toast with Eggs",
+    "image_url": "/avocado-toast.jpg",
+    "description": "Toasted bread topped with mashed avocado and perfectly cooked eggs, sprinkled with chili flakes.",
+    "author": "beny",
+    "tags": [
+      "savory",
+      "fatty",
+      "salty"
+    ]
+  },
+  {
+    "id": 10,
+    "title": "Blueberry Pancakes",
+    "image_url": "/blueberry-pancakes.jpg",
+    "description": "Fluffy pancakes filled with juicy blueberries and served with maple syrup.",
+    "author": "beny",
+    "tags": [
+      "fatty",
+      "sour",
+      "sweet"
+    ]
+  },
+  {
+    "id": 11,
+    "title": "Spicy",
+    "image_url": "/spicy-chicken-curry.jpg",
+    "description": "Its very Spicy and worst for testing",
+    "author": "Pradeep",
+    "tags": [
+      "spicy",
+      "hot",
+      "veg"
+    ]
+  }
+]

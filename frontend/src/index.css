@@ -10,3 +10,12 @@
 body{
     background-color: white;
 }
+
+/* In globals.css or styles.css */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

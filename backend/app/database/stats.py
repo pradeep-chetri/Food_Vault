@@ -1,23 +1,21 @@
 from .initDB import conn
 
-def fetch_stats():
-    with conn:
-        cursor = conn.cursor()
+def _fetch_single_count(query: str) -> int:
+    """Executes a COUNT(*) query and returns the result or 0 if empty."""
+    cursor = conn.cursor()
+    try:
+        cursor.execute(query)
+        row = cursor.fetchone()
+        return row[0] if row and isinstance(row[0], int) else 0
+    except Exception as e:
+        print(f"Error executing query: {query}\n{e}")
+        return 0
+    finally:
+        cursor.close()
 
-        cursor.execute("SELECT COUNT(*) FROM recipes")
-        row_recipes = cursor.fetchone()[0]
-        total_recipes: int = row_recipes if row_recipes is not None else 0
-
-        cursor.execute("SELECT COUNT(*) FROM users")
-        row_users = cursor.fetchone()[0]
-        total_users: int = row_users if row_users is not None else 0
-
-        cursor.execute("SELECT COUNT(*) FROM bookmarks")
-        row_bookmarks = cursor.fetchone()[0]
-        total_bookmarks: int = row_bookmarks if row_bookmarks is not None else 0
-
-        return {
-            "total_recipes": total_recipes,
-            "total_users": total_users,
-            "total_bookmarks": total_bookmarks,
-        }
+def fetch_stats() -> dict:
+    return {
+        "total_recipes": _fetch_single_count("SELECT COUNT(*) FROM recipes"),
+        "total_users": _fetch_single_count("SELECT COUNT(*) FROM users"),
+        "total_bookmarks": _fetch_single_count("SELECT COUNT(*) FROM bookmarks"),
+    }
