@@ -26,13 +26,13 @@
 
 **Frontend**  
 - React + TypeScript  
-- Tailwind CSS v4 
+- Tailwind CSS v4
 - Context API + Custom Hooks  
 - Lucide Icons  
 
 **Backend**  
 - FastAPI (Python)  
-- SQLite (lightweight embedded DB)  
+- Neon Postgresql
 - REST APIs for recipes, bookmarks, and user data  
 
 ---
@@ -57,7 +57,8 @@ food-vault/
 │   │   ├── 📁 models/         # Database models
 │   │   ├── 📁 schemas/        # Pydantic schemas
 │   │   ├── 📁 database/       # Database configuration
-|	│   └── 📄 main.py         # FastAPI application entry point
+|   |   ├── 📁 utlis/          # Utility tools eg jwt, json handler etc.
+|	  │   └── 📄 main.py         # FastAPI application entry point
 |   └── 📁 data/
 |        └── 📄 foodvault.sqlite
 ├── 📄 server_laucher.ps1      # frontend and backend server launcher
@@ -83,9 +84,12 @@ Built with ❤️ by [Pradeep](https://github.com/pradeep-chetri)
 
 ## 📌 Future Roadmap
 
-- [ ] OAuth / secure login system  
-- [ ] Ingredient  and instruction integration
-- [ ] Ingredient-based filtering & dark mode  
+- [ ] OAuth and more secure login system.  
+- [ ] Ingredient-based filtering & dark mode.
+- [ ] Image upload feature.
+- [ ] Add more tags.
+- [ ] More features.
+- [ ] Blogs and artical space. 
 
 
 ---
