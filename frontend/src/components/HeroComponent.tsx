@@ -1,8 +1,8 @@
-import AuthButtons from "./UserMenu";
 import RecipeFormModal from "./NewRecipeForm";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { useStats } from "../hooks/useStats";
+import UserMenu from "./UserMenu";
 
 interface SearchBarProps {
   searchTerm: string;
@@ -22,7 +22,7 @@ export default function HeroComponent({
     <header className="w-full bg-gradient-to-br from-[#fdfcfb] to-[#f4f4f5] text-black px-4 pt-16 pb-10 flex flex-col items-center">
       {/* Top Right Auth Buttons */}
       <div className="w-full max-w-7xl flex justify-end mb-6">
-        <AuthButtons ModelOpen={handleOpenModel} />
+        <UserMenu ModelOpen={handleOpenModel} />
       </div>
 
       {/* Hero Title */}

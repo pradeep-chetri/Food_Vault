@@ -1,142 +1,69 @@
-import sqlite3
-from typing import List, Dict
+# app/crud/recipe.py
+import time
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from sqlalchemy.orm import joinedload
+from app.models.recipe import Recipe, Ingredient, Instruction, Tag
+from app.schemas.recipe import RecipeCreate
 
-from .initDB import conn
+async def create_recipe(db: AsyncSession, recipe: RecipeCreate) -> Recipe:
+    db_recipe = Recipe(
+        title=recipe.title.strip(),
+        image_url=recipe.image_url.strip(),
+        description=recipe.description.strip(),
+        author=recipe.author.strip(),
+        prep_time=recipe.prep_time,
+        cook_time=recipe.cook_time,
+        servings=recipe.servings,
+        difficulty=recipe.difficulty,
+        chef_note=recipe.chef_note.strip() if recipe.chef_note else None
+    )
 
+    # Handle tags
+    tag_objs = []
+    for tag_name in recipe.tags:
+        tag_name = tag_name.strip().lower()
+        if not tag_name:
+            continue
+        existing_tag = await db.execute(select(Tag).where(Tag.name == tag_name))
+        tag = existing_tag.scalars().first()
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.add(tag)
+            await db.flush()
+        tag_objs.append(tag)
+    db_recipe.tags = tag_objs
 
-def recipetableInit():
-    with conn:
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS recipes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            image_url TEXT NOT NULL,
-            description TEXT NOT NULL,
-            author TEXT NOT NULL    
-        )""")
+    # Ingredients
+    db_recipe.ingredients = [
+        Ingredient(ingredient=ing.strip())
+        for ing in recipe.ingredients if ing.strip()
+    ]
 
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS tags (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
-        )""")
+    # Instructions
+    db_recipe.instructions = [
+        Instruction(step_number=i + 1, instruction=inst.strip())
+        for i, inst in enumerate(recipe.instructions) if inst.strip()
+    ]
 
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS recipe_tags (
-            recipe_id INTEGER NOT NULL,
-            tag_id INTEGER NOT NULL,
-            PRIMARY KEY (recipe_id, tag_id),
-            FOREIGN KEY(recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
-            FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
-        )""")
-
-
-recipetableInit()
-
-
-def _get_tag_id(cursor, tag: str) -> int | None:
-    tag_clean = tag.strip().lower()
-    if not tag_clean:
-        return None
-
-    cursor.execute("INSERT OR IGNORE INTO tags (name) VALUES (?)", (tag_clean,))
-    cursor.execute("SELECT id FROM tags WHERE name = ?", (tag_clean,))
-    result = cursor.fetchone()
-
-    return result[0] if result else None
-
-
-def create_recipe(title: str, image_url: str, description: str, author: str, tags: List[str]) -> None:
-    try:
-        with conn:
-            cursor = conn.cursor()
-
-            cursor.execute("""
-                INSERT INTO recipes (title, image_url, description, author)
-                VALUES (?, ?, ?, ?)
-            """, (title.strip(), image_url.strip(), description.strip(), author.strip()))
-
-            recipe_id = cursor.lastrowid
-
-            for tag in tags:
-                tag_id = _get_tag_id(cursor, tag)
-                if tag_id:
-                    cursor.execute("""
-                        INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id)
-                        VALUES (?, ?)
-                    """, (recipe_id, tag_id))
-
-    except sqlite3.Error as e:
-        print(f"Error inserting recipe: {e}")
-        raise
+    db.add(db_recipe)
+    await db.commit()
+    await db.refresh(db_recipe)
+    return db_recipe
 
 
-def get_all_recipes() -> List[Dict]:
-    try:
-        cursor = conn.cursor()
+from typing import List
 
-        cursor.execute("SELECT id, title, image_url, description, author FROM recipes")
-        recipe_rows = cursor.fetchall()
+async def get_all_recipes(db: AsyncSession) -> List[Recipe]:
+    start = time.time()
+    result = await db.execute(
+        select(Recipe)
+        .options(
+            joinedload(Recipe.ingredients),
+            joinedload(Recipe.instructions),
+            joinedload(Recipe.tags)
+        )
+    )
+    print(f"DB Query Time: {time.time() - start:.3f}s")
+    return list(result.scalars().unique().all())
 
-        recipes = []
-        for recipe in recipe_rows:
-            recipe_id, title, image_url, description, author = recipe
-
-            cursor.execute("""
-                SELECT tags.name
-                FROM tags
-                INNER JOIN recipe_tags ON tags.id = recipe_tags.tag_id
-                WHERE recipe_tags.recipe_id = ?
-            """, (recipe_id,))
-
-            tags = [
-                tag for (tag,) in cursor.fetchall()
-                if isinstance(tag, str) and tag.strip()
-            ]
-
-            recipes.append({
-                "id": recipe_id,
-                "title": title,
-                "image_url": image_url,
-                "description": description,
-                "author": author,
-                "tags": tags
-            })
-        
-        
-        return recipes
-
-    except sqlite3.Error as e:
-        print(f"Error fetching recipes: {e}")
-        return []
-
-
-def create_recipes_bulk(recipes: List[Dict]) -> None:
-    try:
-        with conn:
-            cursor = conn.cursor()
-
-            for recipe in recipes:
-                cursor.execute("""
-                    INSERT INTO recipes (title, image_url, description, author)
-                    VALUES (?, ?, ?, ?)
-                """, (
-                    recipe["title"].strip(),
-                    recipe["image_url"].strip(),
-                    recipe["description"].strip(),
-                    recipe["author"].strip()
-                ))
-
-                recipe_id = cursor.lastrowid
-
-                for tag in recipe.get("tags", []):
-                    tag_id = _get_tag_id(cursor, tag)
-                    if tag_id:
-                        cursor.execute("""
-                            INSERT OR IGNORE INTO recipe_tags (recipe_id, tag_id)
-                            VALUES (?, ?)
-                        """, (recipe_id, tag_id))
-
-    except sqlite3.Error as e:
-        print(f"Bulk insert error: {e}")
-        raise

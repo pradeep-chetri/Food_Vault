@@ -1,9 +1,9 @@
-from .recipe import Recipe, RecipeCreate
+from .recipe import RecipeOut, RecipeCreate
 from .user import UserCreate, UserPublic, UserLogin, AccessToken
 from .bookmark import BookmarkCreate
 
 __all__ = [
-    "Recipe",
+    "RecipeOut",
     "RecipeCreate",
     "UserCreate",
     "UserPublic",

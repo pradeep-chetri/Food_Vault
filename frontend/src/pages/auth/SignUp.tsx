@@ -8,7 +8,7 @@ export default function SignUp() {
   const { setUser } = useUser();
   const navigate = useNavigate();
   const [formData, setFormData] = useState<SignUP>({
-    name: "",
+    username: "",
     email: "",
     password: "",
   });
@@ -25,10 +25,10 @@ export default function SignUp() {
     e.preventDefault();
 
     try {
-      const response = await axios.post(
-        "http://localhost:8000/api/auth/signup",
-        formData
-      );
+      const api = axios.create({
+        baseURL: "http://localhost:8000/api",
+      });
+      const response = await api.post("/auth/signup", formData);
 
       // ✅ Save JWT token
       localStorage.setItem("token", response.data.access_token);
@@ -39,12 +39,18 @@ export default function SignUp() {
       ] = `Bearer ${response.data.access_token}`;
 
       // ✅ Get user info
-      const me = await axios.get("/auth/me", {
+      const me = await api.get("/auth/me", {
         headers: { Authorization: `Bearer ${response.data.access_token}` },
       });
 
       // ✅ Set user context
       setUser(me.data);
+
+      setFormData({
+        username: "",
+        email: "",
+        password: "",
+      });
 
       // ✅ Redirect
       navigate("/");
@@ -79,12 +85,12 @@ export default function SignUp() {
             </label>
             <input
               type="text"
-              name="name"
-              id="email"
+              name="username"
+              id="username"
               className="w-full px-4 py-3 border border-gray-300 rounded-2xl shadow-sm focus:outline-none 
               focus:ring-2 focus:ring-amber-400 transition duration-200 placeholder:text-gray-400"
               onChange={handleChange}
-              value={formData.name}
+              value={formData.username}
               required
             />
           </div>

@@ -1,84 +1,56 @@
-from .initDB import conn
-import sqlite3
+from sqlalchemy import delete
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from app.models.bookmark import Bookmark
+from app.models.recipe import Recipe
 
-def bookmarkTableInit():
-    with conn:
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS bookmarks (
-            email TEXT NOT NULL,
-            recipe_id INTEGER NOT NULL,
-            PRIMARY KEY (email, recipe_id)
+async def add_bookmark(db: AsyncSession, email: str, recipe_id: int):
+    db_bookmark = Bookmark(email=email, recipe_id=recipe_id)
+    db.add(db_bookmark)
+    try:
+        await db.commit()
+        return True
+    except Exception as e:
+        await db.rollback()
+        if "UNIQUE constraint" in str(e):
+            return {"error": "Bookmark already exists"}
+        return {"error": str(e)}
+
+async def remove_bookmark(db: AsyncSession, email: str, recipe_id: int):
+    try:
+        await db.execute(
+            delete(Bookmark).where(
+                Bookmark.email == email,
+                Bookmark.recipe_id == recipe_id
+            )
         )
-        """)
-
-# Initialize on module import
-bookmarkTableInit()
-
-def addBookmark(email: str, recipe_id: int):
-    try:
-        with conn:
-            conn.execute(
-                "INSERT INTO bookmarks (email, recipe_id) VALUES (?, ?)",
-                (email, recipe_id)
-            )
+        await db.commit()
         return True
-    except sqlite3.IntegrityError:
-        return {"error": "Bookmark already exists"}
-    except sqlite3.Error as e:
+    except Exception as e:
+        await db.rollback()
         return {"error": str(e)}
 
-def removeBookmark(email: str, recipe_id: int):
+async def get_bookmarks_by_email(db: AsyncSession, email: str):
     try:
-        with conn:
-            conn.execute(
-                "DELETE FROM bookmarks WHERE email=? AND recipe_id=?",
-                (email, recipe_id)
-            )
-        return True
-    except sqlite3.Error as e:
+        stmt = (
+            select(Recipe)
+            .join(Bookmark, Recipe.id == Bookmark.recipe_id)
+            .filter(Bookmark.email == email)
+        )
+        result = await db.execute(stmt)
+        recipes = result.scalars().unique().all()
+
+        result_list = []
+        for recipe in recipes:
+            tags = [tag.name.capitalize() for tag in recipe.tags]
+            result_list.append({
+                "id": recipe.id,
+                "title": recipe.title,
+                "image_url": recipe.image_url,
+                "description": recipe.description,
+                "author": recipe.author,
+                "tags": tags,
+            })
+        return result_list
+    except Exception as e:
         return {"error": str(e)}
-
-def getBookmarksByEmail(email: str):
-    try:
-        with conn:
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                SELECT r.id, r.title, r.image_url, r.description, r.author 
-                FROM recipes r 
-                JOIN bookmarks b ON r.id = b.recipe_id
-                WHERE b.email = ?
-                """,
-                (email,)
-            )
-            recipe_rows = cursor.fetchall()
-
-            recipes = []
-            for row in recipe_rows:
-                recipe_id, title, image_url, description, author = row
-
-                cursor.execute("""
-                    SELECT tags.name
-                    FROM tags
-                    JOIN recipe_tags ON tags.id = recipe_tags.tag_id
-                    WHERE recipe_tags.recipe_id = ?
-                """, (recipe_id,))
-                
-                tags = [tag_row[0].capitalize() for tag_row in cursor.fetchall()]
-
-                recipes.append({
-                    "id": recipe_id,
-                    "title": title,
-                    "image_url": image_url,
-                    "description": description,
-                    "author": author,
-                    "tags": tags
-                })
-
-            cursor.close()
-            return recipes
-
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-        return []

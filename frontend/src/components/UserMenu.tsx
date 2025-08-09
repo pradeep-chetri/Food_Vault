@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   LogOut,
   PlusCircle,
-  Settings,
   ChevronDown,
   Crown,
 } from "lucide-react";
@@ -72,13 +71,6 @@ export default function UserMenu({ ModelOpen }: UserMenuProps) {
       color: "hover:text-blue-600 hover:bg-blue-50",
       description: "Manage your created recipes"
     },
-    {
-      icon: Settings,
-      label: "Account Settings",
-      path: "/settings",
-      color: "hover:text-gray-600 hover:bg-gray-50",
-      description: "Update your preferences"
-    }
   ];
 
   return (
@@ -97,14 +89,14 @@ export default function UserMenu({ ModelOpen }: UserMenuProps) {
             <div className="relative">
               <img
                 src="/profile_pic.jpg"
-                alt={`${user?.name}'s profile`}
+                alt={`${user?.username}'s profile`}
                 className="w-8 h-8 rounded-full object-cover"
               />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 border-2 border-white rounded-full"></div>
             </div>
             <div className="hidden sm:block text-left">
               <p className="text-sm font-medium text-gray-900 truncate max-w-24">
-                {user?.name}
+                {user?.username}
               </p>
               <p className="text-xs text-gray-500">Online</p>
             </div>
@@ -133,7 +125,7 @@ export default function UserMenu({ ModelOpen }: UserMenuProps) {
                     <div className="relative">
                       <img
                         src="/profile_pic.jpg"
-                        alt={`${user?.name}'s profile`}
+                        alt={`${user?.username}'s profile`}
                         className="w-12 h-12 rounded-full object-cover ring-3 ring-white shadow-sm"
                       />
                       <div className="absolute -bottom-1 -right-1 bg-orange-500 text-white rounded-full p-1">
@@ -142,7 +134,7 @@ export default function UserMenu({ ModelOpen }: UserMenuProps) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-gray-900 truncate">
-                        {user?.name}
+                        {user?.username}
                       </h3>
                       <p className="text-sm text-gray-600">{user?.email}</p>
                       <div className="flex items-center mt-1">

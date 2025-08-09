@@ -18,12 +18,8 @@ export default function RecipeGrid({ recipes }: RecipeGridProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 justify-items-center">
           {recipes.map((recipe) => (
             <RecipeCard
-              key={recipe.id}
-              id={recipe.id}
-              title={recipe.title}
-              description={recipe.description}
-              imageUrl={recipe.image_url}
-              tags={recipe.tags}
+              key={recipe.id} // <=== here
+              recipe={recipe}
             />
           ))}
         </div>

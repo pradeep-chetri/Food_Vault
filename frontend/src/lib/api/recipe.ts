@@ -19,5 +19,5 @@ export async function fetchRecipeData(): Promise<recipeDataType[]>{
 
 export async function submitNewRecipe(formData: recipeCreateDataType){
     const url = await API.post("/add", formData)
-    console.log(url.data)
+    return url.data
 }

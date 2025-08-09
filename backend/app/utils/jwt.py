@@ -4,9 +4,11 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from typing import Optional
 import os
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.auth import getUserByEmail
 from app.schemas import UserPublic
+from app.database.initDB import get_db
 
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-dev-key")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
@@ -30,21 +32,20 @@ def decode_access_token(token: str):
     except JWTError:
         return None
     
-def get_current_user(token: str = Depends(oauth2_scheme)) -> UserPublic:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)) -> UserPublic:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
-        if email is None:
+        if email is None or not isinstance(email, str):
             raise credentials_exception
-        user = getUserByEmail(email)
+        user = await getUserByEmail(db, email)  # <-- await here
         if user is None:
             raise credentials_exception
-        return UserPublic(**user)  # ✅ Cast to correct return type
+        return UserPublic.from_orm(user)  # better conversion
     except JWTError:
         raise credentials_exception

@@ -1,40 +1,26 @@
-import sqlite3
-from .initDB import conn
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from app.models.user import User
+from app.schemas.user import UserPublic
+from pydantic import EmailStr
 
-
-def usertableInit():
-    with conn:
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
-        )
-        """)
-
-# Initialize the table once
-usertableInit()
-
-def addUser(name, email, password):
+async def addUser(db: AsyncSession, username: str, email: str, hashed_password: str) -> User:
+    new_user = User(username=username, email=email, hashed_password=hashed_password)
+    db.add(new_user)
     try:
-        with conn:
-            conn.execute("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", (name, email, password))
-        return True
-    except sqlite3.IntegrityError:
-        return {"error": "Email already exists."}
-    except sqlite3.Error as e:
-        return {"error": str(e)}
+        await db.commit()
+        await db.refresh(new_user)
+        return new_user
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Username or Email already exists.")
 
-def getUserByEmail(email):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-    user = cursor.fetchone()
+
+async def getUserByEmail(db: AsyncSession, email: EmailStr):
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalars().first()
     if user:
-        return {
-            "id": user[0],
-            "name": user[1],
-            "email": user[2],
-            "hashed_password": user[3],
-        }
+        return user
     return None

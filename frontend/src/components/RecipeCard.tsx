@@ -6,31 +6,24 @@ import { toggleBookmark as toggleBookmarkAPI } from "../lib/api/bookmark";
 import { PREDEFINED_TAGS } from "../constant/Tags_Info";
 import { useState } from "react";
 import RecipeDetails from "./RecipeDetails";
+import type { recipeDataType } from "../types/recipeType";
 
 interface RecipeCardProps {
-  id: number;
-  title: string;
-  description: string;
-  imageUrl: string;
-  tags: string[];
+  recipe: recipeDataType
 }
 
 export default function RecipeCard({
-  id,
-  title,
-  description,
-  imageUrl,
-  tags,
+  recipe
 }: RecipeCardProps) {
   const { bookmarkedIds, toggleBookmark } = useBookmarksContext();
   const { user } = useUser();
   const [model, setModel] = useState<boolean>(false);
-  const isBookmarked = bookmarkedIds.has(id);
+  const isBookmarked = bookmarkedIds.has(recipe.id);
 
   const handleClick = async () => {
     if (!user) return;
-    toggleBookmark(id);
-    await toggleBookmarkAPI(id, isBookmarked);
+    toggleBookmark(recipe.id);
+    await toggleBookmarkAPI(user.email,recipe.id, isBookmarked);
   };
 
   const handleModel = () => {
@@ -46,8 +39,8 @@ export default function RecipeCard({
         {/* Image */}
         <div className="h-40 overflow-hidden relative">
           <img
-            src={imageUrl}
-            alt={title}
+            src={recipe.image_url}
+            alt={recipe.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
 
@@ -73,22 +66,22 @@ export default function RecipeCard({
         {/* Content */}
         <div className="p-4 flex flex-col justify-between flex-grow">
           <div className="flex flex-col gap-1">
-            <h3 className="text-base font-semibold text-zinc-800">{title}</h3>
+            <h3 className="text-base font-semibold text-zinc-800">{recipe.title}</h3>
             <p className="text-sm text-gray-600 leading-relaxed font-[cursive]">
-              {description}
+              {recipe.description}
             </p>
           </div>
 
           {/* Tags */}
           <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-zinc-100">
-            {tags.map((tag) => {
+            {recipe.tags.map((tag) => {
               const formatted = capitalize(tag);
               const style = PREDEFINED_TAGS.find(
                 (tag) => tag.name === formatted
               );
               return (
                 <span
-                  key={tag}
+                  key={tag.name}
                   className={`px-2 py-0.5 text-xs rounded-full font-medium ${style?.color}`}
                 >
                   {formatted}
@@ -98,7 +91,7 @@ export default function RecipeCard({
           </div>
         </div>
       </div>
-      <RecipeDetails isOpen={model} Close={handleModel}/>
+      <RecipeDetails isOpen={model} Close={handleModel} recipes={recipe}/>
     </div>
   );
 }

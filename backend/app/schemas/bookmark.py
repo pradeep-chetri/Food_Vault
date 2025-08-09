@@ -4,4 +4,4 @@ class Bookmark(BaseModel):
     recipe_id: int
 
 class BookmarkCreate(Bookmark):
-    pass
+    email: str

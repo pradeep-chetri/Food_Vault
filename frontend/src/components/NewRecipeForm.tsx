@@ -3,21 +3,8 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { useUser } from "../context/UserDataContext";
 import { capitalize } from "../utils/format";
 import { PREDEFINED_TAGS } from "../constant/Tags_Info";
-
-
-interface RecipeFormData {
-  title: string;
-  image_url: string;
-  description: string;
-  tags: string[];
-  author: string;
-  ingredients: string[];
-  instructions: string[];
-  prepTime: number;
-  cookTime: number;
-  servings: number;
-  difficulty: "Easy" | "Medium" | "Hard";
-}
+import { submitNewRecipe } from "../lib/api/recipe";
+import type { recipeCreate } from "../types/recipeType";
 
 interface RecipeFormModalProps {
   isOpen: boolean;
@@ -28,42 +15,50 @@ export default function RecipeFormModal({
   isOpen,
   onClose,
 }: RecipeFormModalProps) {
-  const { user } = useUser()
-  const [formData, setFormData] = useState<RecipeFormData>({
+  const { user } = useUser();
+  const [formData, setFormData] = useState<recipeCreate>({
     title: "",
     image_url: "",
     description: "",
-    tags: [],
-    author: user?.name || "Anonymous",
-    ingredients: [""],
-    instructions: [""],
-    prepTime: 15,
-    cookTime: 30,
+    tags: [], // Tag[]: array of objects with { name: string }
+    author: user?.username || "Anonymous",
+    ingredients: [{ ingredient: "" }], // Ingredient[]: array of objects
+    instructions: [{ instruction: "" }], // Instruction[]: array of objects
+    prep_time: 15,
+    cook_time: 45,
     servings: 4,
     difficulty: "Medium",
+    chef_note: "",
   });
 
   if (!isOpen) return null;
+  if (!user) return null;
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: name === "prepTime" || name === "cookTime" || name === "servings" 
-        ? parseInt(value) || 0 
-        : value 
+    setFormData((prev) => ({
+      ...prev,
+      [name]:
+        name === "prepTime" || name === "cookTime" || name === "servings"
+          ? parseInt(value) || 0
+          : value,
     }));
   };
 
   const toggleTag = (tagName: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.includes(tagName)
-        ? prev.tags.filter((tag) => tag !== tagName)
-        : [...prev.tags, tagName],
-    }));
+    setFormData((prev) => {
+      const exists = prev.tags.find((tag) => tag.name === tagName);
+      return {
+        ...prev,
+        tags: exists
+          ? prev.tags.filter((tag) => tag.name !== tagName)
+          : [...prev.tags, { name: tagName }],
+      };
+    });
   };
 
   const getTagColor = (tagName: string) => {
@@ -74,14 +69,14 @@ export default function RecipeFormModal({
   const removeTag = (tagToRemove: string) => {
     setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
+      tags: prev.tags.filter((tag) => tag.name !== tagToRemove),
     }));
   };
 
   const addIngredient = () => {
     setFormData((prev) => ({
       ...prev,
-      ingredients: [...prev.ingredients, ""],
+      ingredients: [...prev.ingredients, { ingredient: "" }],
     }));
   };
 
@@ -95,14 +90,16 @@ export default function RecipeFormModal({
   const updateIngredient = (index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      ingredients: prev.ingredients.map((ing, i) => i === index ? value : ing),
+      ingredients: prev.ingredients.map((ing, i) =>
+        i === index ? { ingredient: value } : ing
+      ),
     }));
   };
 
   const addInstruction = () => {
     setFormData((prev) => ({
       ...prev,
-      instructions: [...prev.instructions, ""],
+      instructions: [...prev.instructions, { instruction: "" }],
     }));
   };
 
@@ -116,34 +113,44 @@ export default function RecipeFormModal({
   const updateInstruction = (index: number, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      instructions: prev.instructions.map((inst, i) => i === index ? value : inst),
+      instructions: prev.instructions.map((inst, i) =>
+        i === index ? { instruction: value } : inst
+      ),
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Filter out empty ingredients and instructions
     const cleanedData = {
       ...formData,
-      ingredients: formData.ingredients.filter(ing => ing.trim() !== ""),
-      instructions: formData.instructions.filter(inst => inst.trim() !== ""),
+      ingredients: formData.ingredients.filter(
+        (ing) => ing.ingredient.trim() !== ""
+      ),
+      instructions: formData.instructions.filter(
+        (inst) => inst.instruction.trim() !== ""
+      ),
     };
 
     try {
-      console.log("Submitting recipe:", cleanedData);
-      
+      console.log("Submitting recipe:");
+      const res = await submitNewRecipe(cleanedData);
+
+      console.log(res);
+
       // Reset form
       setFormData({
         title: "",
         image_url: "",
         description: "",
-        tags: [],
-        author: user?.name || "Anonymous",
-        ingredients: [""],
-        instructions: [""],
-        prepTime: 15,
-        cookTime: 30,
+        tags: [], // Tag[]: array of objects with { name: string }
+        author: user?.username || "Anonymous",
+        ingredients: [{ ingredient: "" }], // Ingredient[]: array of objects
+        instructions: [{ instruction: "" }], // Instruction[]: array of objects
+        prep_time: 15,
+        cook_time: 45,
         servings: 4,
         difficulty: "Medium",
+        chef_note: "",
       });
 
       onClose();
@@ -173,8 +180,10 @@ export default function RecipeFormModal({
           <div className="space-y-8">
             {/* Basic Info Section */}
             <div className="bg-gray-50 rounded-2xl p-6 space-y-6">
-              <h3 className="text-lg font-semibold text-zinc-700 mb-4">Basic Information</h3>
-              
+              <h3 className="text-lg font-semibold text-zinc-700 mb-4">
+                Basic Information
+              </h3>
+
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -239,8 +248,10 @@ export default function RecipeFormModal({
 
             {/* Recipe Details Section */}
             <div className="bg-gray-50 rounded-2xl p-6 space-y-6">
-              <h3 className="text-lg font-semibold text-zinc-700 mb-4">Recipe Details</h3>
-              
+              <h3 className="text-lg font-semibold text-zinc-700 mb-4">
+                Recipe Details
+              </h3>
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {/* Prep Time */}
                 <div>
@@ -250,7 +261,7 @@ export default function RecipeFormModal({
                   <input
                     type="number"
                     name="prepTime"
-                    value={formData.prepTime}
+                    value={formData.prep_time}
                     onChange={handleChange}
                     min="1"
                     required
@@ -266,7 +277,7 @@ export default function RecipeFormModal({
                   <input
                     type="number"
                     name="cookTime"
-                    value={formData.cookTime}
+                    value={formData.cook_time}
                     onChange={handleChange}
                     min="1"
                     required
@@ -313,7 +324,9 @@ export default function RecipeFormModal({
             {/* Ingredients Section */}
             <div className="bg-gray-50 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-zinc-700">Ingredients</h3>
+                <h3 className="text-lg font-semibold text-zinc-700">
+                  Ingredients
+                </h3>
                 <button
                   type="button"
                   onClick={addIngredient}
@@ -323,13 +336,13 @@ export default function RecipeFormModal({
                   Add Ingredient
                 </button>
               </div>
-              
+
               <div className="space-y-3">
                 {formData.ingredients.map((ingredient, index) => (
                   <div key={index} className="flex gap-3">
                     <input
                       type="text"
-                      value={ingredient}
+                      value={ingredient.ingredient}
                       onChange={(e) => updateIngredient(index, e.target.value)}
                       placeholder={`Ingredient ${index + 1}...`}
                       className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
@@ -351,7 +364,9 @@ export default function RecipeFormModal({
             {/* Instructions Section */}
             <div className="bg-gray-50 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-zinc-700">Instructions</h3>
+                <h3 className="text-lg font-semibold text-zinc-700">
+                  Instructions
+                </h3>
                 <button
                   type="button"
                   onClick={addInstruction}
@@ -361,7 +376,7 @@ export default function RecipeFormModal({
                   Add Step
                 </button>
               </div>
-              
+
               <div className="space-y-3">
                 {formData.instructions.map((instruction, index) => (
                   <div key={index} className="flex gap-3">
@@ -369,7 +384,7 @@ export default function RecipeFormModal({
                       {index + 1}
                     </div>
                     <textarea
-                      value={instruction}
+                      value={instruction.instruction}
                       onChange={(e) => updateInstruction(index, e.target.value)}
                       placeholder={`Step ${index + 1} instructions...`}
                       rows={3}
@@ -392,7 +407,7 @@ export default function RecipeFormModal({
             {/* Tags Section */}
             <div className="bg-gray-50 rounded-2xl p-6">
               <h3 className="text-lg font-semibold text-zinc-700 mb-4">Tags</h3>
-              
+
               {/* Selected Tags Display */}
               {formData.tags.length > 0 && (
                 <div className="mb-6">
@@ -403,10 +418,12 @@ export default function RecipeFormModal({
                     {formData.tags.map((tag, i) => (
                       <span
                         key={i}
-                        className={`${getTagColor(tag)} text-xs px-3 py-1.5 rounded-full border cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
-                        onClick={() => removeTag(tag)}
+                        className={`${getTagColor(
+                          tag.name
+                        )} text-xs px-3 py-1.5 rounded-full border cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
+                        onClick={() => removeTag(tag.name)}
                       >
-                        {tag}
+                        {tag.name}
                         <X size={12} className="opacity-60 hover:opacity-100" />
                       </span>
                     ))}
@@ -428,8 +445,10 @@ export default function RecipeFormModal({
                       key={tag.name}
                       type="button"
                       onClick={() => toggleTag(tag.name)}
-                      className={`${tag.color} text-xs px-3 py-2 rounded-lg border transition-all duration-200 hover:scale-105 ${
-                        formData.tags.includes(tag.name)
+                      className={`${
+                        tag.color
+                      } text-xs px-3 py-2 rounded-lg border transition-all duration-200 hover:scale-105 ${
+                        formData.tags.some(tagObj => tagObj.name === tag.name)
                           ? "ring-2 ring-lime-400 ring-offset-1 shadow-md"
                           : "hover:shadow-sm"
                       }`}
@@ -439,6 +458,20 @@ export default function RecipeFormModal({
                   ))}
                 </div>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
+                Chef's Insites (Optional)
+              </label>
+              <textarea
+                name="chef_note"
+                rows={4}
+                value={formData.chef_note}
+                onChange={handleChange}
+                required
+                className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                placeholder="Chef or Author suggestions regarding the recipe or any suggestions..."
+              />
             </div>
 
             {/* Actions */}

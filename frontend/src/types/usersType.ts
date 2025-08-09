@@ -3,7 +3,7 @@ interface User {
     password: string;
 }
 export interface SignUP extends User {
-    name: string;
+    username: string;
 }
 
 export interface Login extends User {}

@@ -1,55 +1,45 @@
+from typing import cast
 from fastapi import APIRouter, HTTPException, Depends
-from app.schemas import UserCreate, UserPublic, UserLogin, AccessToken
-from app.database import addUser, getUserByEmail
-from app.utils import hash_password, verify_password , create_access_token, get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.schemas.user import UserCreate, UserLogin, AccessToken, UserPublic
+from app.database.auth import addUser, getUserByEmail
+from app.utils import hash_password, verify_password, create_access_token, get_current_user
+from app.database.initDB import get_db
+from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 @router.post("/signup", response_model=AccessToken)
-def signup(data: UserCreate):
-    try:
-        hashed_pw = hash_password(data.password)
-        success = addUser(data.name, data.email, hashed_pw)
+async def signup(data: UserCreate, db: AsyncSession = Depends(get_db)):
+    hashed_pw = hash_password(data.password)
+    result = await addUser(db, data.username, data.email, hashed_pw)
 
-        if isinstance(success, dict) and "error" in success:
-            raise HTTPException(status_code=400, detail=success["error"])
+    token = create_access_token({"sub": result.email})
 
-        token = create_access_token({"sub": data.email})
-        
-        return {
-            "access_token": token, 
-            "token_type": "bearer", 
-            "user": {
-                "name": data.name, 
-                "email": data.email
-                }
-            }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": UserPublic.model_validate(result)
+    }
+
+
 
 @router.post("/login", response_model=AccessToken)
-def login(data: UserLogin):
-    try:
-        user = getUserByEmail(data.email)
+async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
+    user = await getUserByEmail(db, data.email)
 
-        if not user or not verify_password(data.password, user["hashed_password"]):
-            raise HTTPException(status_code=401, detail="Invalid credentials")
+    if not user or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        token = create_access_token({"sub": user["email"]})
-        
-        return {
-            "access_token": token, 
-            "token_type": "bearer", 
-            "user": {
-                "name": user["name"], 
-                "email": user["email"]
-                }
-            }
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    token = create_access_token({"sub": user.email})
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": UserPublic.from_orm(user)
+    }
 
 @router.get("/me", response_model=UserPublic)
-def get_me(user: dict = Depends(get_current_user)):
+async def get_me(user: User = Depends(get_current_user)):
     return user
