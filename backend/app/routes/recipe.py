@@ -32,7 +32,6 @@ async def add_recipe(data: RecipeCreate, db: AsyncSession = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # 🔹 POST multiple recipes (bulk insert)
 @router.post("/bulk", summary="Add multiple recipes", status_code=201)
 async def add_recipes_bulk(data: List[RecipeCreate], db: AsyncSession = Depends(get_db)):

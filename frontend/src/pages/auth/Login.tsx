@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "../../context/UserDataContext";
 import type { Login } from "../../types/usersType";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent, useEffect } from "react";
 import axios from "axios";
 
 export default function Login() {
@@ -11,10 +11,11 @@ export default function Login() {
     email: "",
     password: "",
   });
+  const [userState, setUserState] = useState<Login | null>(null);
 
   const API = axios.create({
-  baseURL: "http://localhost:8000/api/auth",
-});
+    baseURL: "http://localhost:8000/api",
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,20 +29,28 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      const response = await API.post(
-        "/login",
-        formData
-      );
+      // Login request
+      const response = await API.post("/auth/login", formData);
 
+      // Save token
       localStorage.setItem("token", response.data.access_token);
 
-      const me = await axios.get("/me", {
+      // Set axios default header
+      axios.defaults.headers.common["Authorization"] = `Bearer ${response.data.access_token}`;
+
+      // Fetch /me
+      const me = await API.get("/auth/me", {
         headers: { Authorization: `Bearer ${response.data.access_token}` },
       });
 
+      // Cache user data
+      localStorage.setItem("user", JSON.stringify(me.data));
+
+      // Update context
       setUser(me.data);
 
-      navigate("/"); // redirect to dashboard or home page after login
+      // Redirect
+      navigate("/");
     } catch (error: any) {
       console.error(
         "Error during login:",
@@ -49,6 +58,32 @@ export default function Login() {
       );
     }
   };
+
+  // Auto-load user from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const cachedUser = localStorage.getItem("user");
+
+    if (cachedUser) {
+      setUserState(JSON.parse(cachedUser));
+    }
+
+    if (token) {
+      axios
+        .get("http://localhost:8000/api/auth/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then((res) => {
+          setUserState(res.data);
+          localStorage.setItem("user", JSON.stringify(res.data));
+        })
+        .catch(() => {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setUserState(null);
+        });
+    }
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 text-black bg-white">
@@ -80,6 +115,7 @@ export default function Login() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              required
             />
           </div>
 
@@ -99,6 +135,7 @@ export default function Login() {
               name="password"
               value={formData.password}
               onChange={handleChange}
+              required
             />
           </div>
 
@@ -120,7 +157,7 @@ export default function Login() {
         </form>
 
         <p className="mt-6 text-sm text-center text-gray-500">
-          Don`t have an account?{" "}
+          Don’t have an account?{" "}
           <Link
             to="/auth/signup"
             className="text-lime-600 font-medium hover:underline"

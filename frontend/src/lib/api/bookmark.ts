@@ -36,8 +36,9 @@ export async function toggleBookmark(email: string, recipeId: number, isBookmark
  */
 export async function fetchBookmarks(): Promise<recipeDataType[]> {
   try {
+    console.log("Calling route")
     const response = await API.get<recipeDataType[]>("/");
-
+    console.log("Got the data")
     if (response.status !== 200) {
       throw new Error(`Failed to fetch bookmarks. Status: ${response.status}`);
     }

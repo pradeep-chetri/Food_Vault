@@ -19,11 +19,21 @@ export default function HeroComponent({
   const handleOpenModel = () => setIsOpen(true);
 
   return (
-    <header className="w-full bg-gradient-to-br from-[#fdfcfb] to-[#f4f4f5] text-black px-4 pt-16 pb-10 flex flex-col items-center">
+    <header className="w-full bg-gradient-to-br from-[#fdfcfb] to-[#f4f4f5] text-black md:px-4 md:pt-8 pb-10 flex flex-col items-center">
       {/* Top Right Auth Buttons */}
-      <div className="w-full max-w-7xl flex justify-end mb-6">
-        <UserMenu ModelOpen={handleOpenModel} />
-      </div>
+      {/* Top Navigation / User Menu */}
+<div className="w-full pb-10">
+  {/* Mobile Sticky Bar */}
+  <nav className="flex md:hidden sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/50 px-4 py-3 justify-end">
+    <UserMenu ModelOpen={handleOpenModel} />
+  </nav>
+
+  {/* Desktop Top Bar */}
+  <div className="hidden md:flex w-full max-w-7xl mx-auto justify-end pt-5 mb-6 pb-4 bg-zinc-300 md:bg-transparent">
+    <UserMenu ModelOpen={handleOpenModel} />
+  </div>
+</div>
+
 
       {/* Hero Title */}
       <div className="text-center max-w-3xl space-y-6 relative z-10">

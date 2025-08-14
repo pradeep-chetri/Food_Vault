@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { useUser } from "../context/UserDataContext";
 import { capitalize } from "../utils/format";
 import { PREDEFINED_TAGS } from "../constant/Tags_Info";
 import { submitNewRecipe } from "../lib/api/recipe";
 import type { recipeCreate } from "../types/recipeType";
+import ImageUploader from "./ImageUploader";
 
 interface RecipeFormModalProps {
   isOpen: boolean;
@@ -16,21 +17,36 @@ export default function RecipeFormModal({
   onClose,
 }: RecipeFormModalProps) {
   const { user } = useUser();
-  const [formData, setFormData] = useState<recipeCreate>({
+  
+  // Initial state factory function to ensure clean resets
+  const getInitialFormData = useCallback((): recipeCreate => ({
     title: "",
     image_url: "",
     description: "",
-    tags: [], // Tag[]: array of objects with { name: string }
+    tags: [],
     author: user?.username || "Anonymous",
-    ingredients: [{ ingredient: "" }], // Ingredient[]: array of objects
-    instructions: [{ instruction: "" }], // Instruction[]: array of objects
+    ingredients: [{ ingredient: "" }],
+    instructions: [{ instruction: "" }],
     prep_time: 15,
     cook_time: 45,
     servings: 4,
     difficulty: "Medium",
     chef_note: "",
-  });
+  }), [user?.username]);
 
+  const [formData, setFormData] = useState<recipeCreate>(getInitialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fixed: Update formData.image_url when upload completes
+  const onUploadComplete = useCallback((url: string) => {
+    setFormData(prev => ({
+      ...prev,
+      image_url: url
+    }));
+  }, []);
+
+  // Early returns after all hooks
   if (!isOpen) return null;
   if (!user) return null;
 
@@ -40,11 +56,13 @@ export default function RecipeFormModal({
     >
   ) => {
     const { name, value } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
-      [name]:
-        name === "prepTime" || name === "cookTime" || name === "servings"
-          ? parseInt(value) || 0
+      [name]: 
+        // Fix the field name mapping and ensure proper type conversion
+        name === "prep_time" || name === "cook_time" || name === "servings"
+          ? Math.max(1, parseInt(value) || 0) // Ensure minimum value of 1
           : value,
     }));
   };
@@ -119,43 +137,100 @@ export default function RecipeFormModal({
     }));
   };
 
+  // Form validation function
+  const validateForm = (): string | null => {
+    if (!formData.title.trim()) return "Recipe title is required";
+    if (!formData.description.trim()) return "Recipe description is required";
+    if (!formData.image_url.trim()) return "Recipe image is required";
+    
+    const validIngredients = formData.ingredients.filter(
+      (ing) => ing.ingredient.trim() !== ""
+    );
+    if (validIngredients.length === 0) return "At least one ingredient is required";
+    
+    const validInstructions = formData.instructions.filter(
+      (inst) => inst.instruction.trim() !== ""
+    );
+    if (validInstructions.length === 0) return "At least one instruction is required";
+    
+    if (formData.prep_time < 1) return "Prep time must be at least 1 minute";
+    if (formData.cook_time < 1) return "Cook time must be at least 1 minute";
+    if (formData.servings < 1) return "Servings must be at least 1";
+    
+    return null;
+  };
+
   const handleSubmit = async () => {
-    // Filter out empty ingredients and instructions
-    const cleanedData = {
-      ...formData,
-      ingredients: formData.ingredients.filter(
-        (ing) => ing.ingredient.trim() !== ""
-      ),
-      instructions: formData.instructions.filter(
-        (inst) => inst.instruction.trim() !== ""
-      ),
-    };
+    // Clear previous error
+    setSubmitError(null);
+    
+    // Validate form
+    const validationError = validateForm();
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
+
+    // Prevent double submission
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
 
     try {
-      console.log("Submitting recipe:");
+      // Filter out empty ingredients and instructions
+      const cleanedData: recipeCreate = {
+        ...formData,
+        ingredients: formData.ingredients.filter(
+          (ing) => ing.ingredient.trim() !== ""
+        ),
+        instructions: formData.instructions.filter(
+          (inst) => inst.instruction.trim() !== ""
+        ),
+        // Trim string fields
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        chef_note: formData.chef_note.trim(),
+      };
+
+      console.log("Submitting recipe:", cleanedData);
       const res = await submitNewRecipe(cleanedData);
+      console.log("Recipe submitted successfully:", res);
 
-      console.log(res);
-
-      // Reset form
-      setFormData({
-        title: "",
-        image_url: "",
-        description: "",
-        tags: [], // Tag[]: array of objects with { name: string }
-        author: user?.username || "Anonymous",
-        ingredients: [{ ingredient: "" }], // Ingredient[]: array of objects
-        instructions: [{ instruction: "" }], // Instruction[]: array of objects
-        prep_time: 15,
-        cook_time: 45,
-        servings: 4,
-        difficulty: "Medium",
-        chef_note: "",
-      });
-
+      // Reset form to initial state
+      setFormData(getInitialFormData());
+      setSubmitError(null);
+      
+      // Close modal
       onClose();
     } catch (error) {
       console.error("Error adding recipe:", error);
+      setSubmitError(
+        error instanceof Error 
+          ? error.message 
+          : "Failed to save recipe. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle modal close with confirmation if form has data
+  const handleClose = () => {
+    const hasFormData = 
+      formData.title.trim() || 
+      formData.description.trim() || 
+      formData.ingredients.some(ing => ing.ingredient.trim()) ||
+      formData.instructions.some(inst => inst.instruction.trim()) ||
+      formData.tags.length > 0;
+    
+    if (hasFormData && !isSubmitting) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+        setFormData(getInitialFormData());
+        setSubmitError(null);
+        onClose();
+      }
+    } else {
+      onClose();
     }
   };
 
@@ -164,8 +239,9 @@ export default function RecipeFormModal({
       <div className="w-full max-w-4xl bg-white no-scrollbar rounded-2xl shadow-2xl relative border border-zinc-200 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 transition z-10 bg-white/80 backdrop-blur-sm rounded-full p-2"
+          onClick={handleClose}
+          disabled={isSubmitting}
+          className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 transition z-10 bg-white/80 backdrop-blur-sm rounded-full p-2 disabled:opacity-50"
         >
           <X size={20} />
         </button>
@@ -175,6 +251,13 @@ export default function RecipeFormModal({
           <h2 className="text-3xl font-bold text-zinc-800 mb-8 text-center">
             🍲 Add New Recipe
           </h2>
+
+          {/* Error Message */}
+          {submitError && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-700 text-sm font-medium">{submitError}</p>
+            </div>
+          )}
 
           {/* Form */}
           <div className="space-y-8">
@@ -187,47 +270,44 @@ export default function RecipeFormModal({
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Recipe Title
+                  Recipe Title *
                 </label>
                 <input
                   type="text"
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   required
-                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                   placeholder="Enter recipe title..."
                 />
               </div>
 
-              {/* Image URL */}
+              {/* Image Upload */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Image URL
+                  Recipe Image *
                 </label>
-                <input
-                  type="text"
-                  name="image_url"
-                  value={formData.image_url}
-                  onChange={handleChange}
-                  required
-                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
-                  placeholder="https://example.com/image.jpg"
+                <ImageUploader 
+                  folder="/Recipe" 
+                  onUploadComplete={onUploadComplete}
                 />
               </div>
 
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Description
+                  Description *
                 </label>
                 <textarea
                   name="description"
                   rows={4}
                   value={formData.description}
                   onChange={handleChange}
+                  disabled={isSubmitting}
                   required
-                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                  className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                   placeholder="Describe your recipe..."
                 />
               </div>
@@ -256,62 +336,66 @@ export default function RecipeFormModal({
                 {/* Prep Time */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Prep Time (min)
+                    Prep Time (min) *
                   </label>
                   <input
                     type="number"
-                    name="prepTime"
+                    name="prep_time"
                     value={formData.prep_time}
                     onChange={handleChange}
+                    disabled={isSubmitting}
                     min="1"
                     required
-                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                   />
                 </div>
 
                 {/* Cook Time */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Cook Time (min)
+                    Cook Time (min) *
                   </label>
                   <input
                     type="number"
-                    name="cookTime"
+                    name="cook_time"
                     value={formData.cook_time}
                     onChange={handleChange}
+                    disabled={isSubmitting}
                     min="1"
                     required
-                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                   />
                 </div>
 
                 {/* Servings */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Servings
+                    Servings *
                   </label>
                   <input
                     type="number"
                     name="servings"
                     value={formData.servings}
                     onChange={handleChange}
+                    disabled={isSubmitting}
                     min="1"
                     required
-                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                   />
                 </div>
 
                 {/* Difficulty */}
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Difficulty
+                    Difficulty *
                   </label>
                   <select
                     name="difficulty"
                     value={formData.difficulty}
                     onChange={handleChange}
+                    disabled={isSubmitting}
                     required
-                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                    className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                   >
                     <option value="Easy">Easy</option>
                     <option value="Medium">Medium</option>
@@ -325,12 +409,13 @@ export default function RecipeFormModal({
             <div className="bg-gray-50 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-zinc-700">
-                  Ingredients
+                  Ingredients *
                 </h3>
                 <button
                   type="button"
                   onClick={addIngredient}
-                  className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition text-sm"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition text-sm disabled:opacity-50"
                 >
                   <Plus size={16} />
                   Add Ingredient
@@ -344,14 +429,16 @@ export default function RecipeFormModal({
                       type="text"
                       value={ingredient.ingredient}
                       onChange={(e) => updateIngredient(index, e.target.value)}
+                      disabled={isSubmitting}
                       placeholder={`Ingredient ${index + 1}...`}
-                      className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                      className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                     />
                     {formData.ingredients.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeIngredient(index)}
-                        className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition"
+                        disabled={isSubmitting}
+                        className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition disabled:opacity-50"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -365,12 +452,13 @@ export default function RecipeFormModal({
             <div className="bg-gray-50 rounded-2xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-zinc-700">
-                  Instructions
+                  Instructions *
                 </h3>
                 <button
                   type="button"
                   onClick={addInstruction}
-                  className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition text-sm"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-4 py-2 bg-lime-500 text-white rounded-lg hover:bg-lime-600 transition text-sm disabled:opacity-50"
                 >
                   <Plus size={16} />
                   Add Step
@@ -386,15 +474,17 @@ export default function RecipeFormModal({
                     <textarea
                       value={instruction.instruction}
                       onChange={(e) => updateInstruction(index, e.target.value)}
+                      disabled={isSubmitting}
                       placeholder={`Step ${index + 1} instructions...`}
                       rows={3}
-                      className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
+                      className="flex-1 rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
                     />
                     {formData.instructions.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeInstruction(index)}
-                        className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition mt-2"
+                        disabled={isSubmitting}
+                        className="p-3 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition mt-2 disabled:opacity-50"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -420,8 +510,8 @@ export default function RecipeFormModal({
                         key={i}
                         className={`${getTagColor(
                           tag.name
-                        )} text-xs px-3 py-1.5 rounded-full border cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1`}
-                        onClick={() => removeTag(tag.name)}
+                        )} text-xs px-3 py-1.5 rounded-full border cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1 ${isSubmitting ? 'pointer-events-none opacity-50' : ''}`}
+                        onClick={() => !isSubmitting && removeTag(tag.name)}
                       >
                         {tag.name}
                         <X size={12} className="opacity-60 hover:opacity-100" />
@@ -444,10 +534,11 @@ export default function RecipeFormModal({
                     <button
                       key={tag.name}
                       type="button"
-                      onClick={() => toggleTag(tag.name)}
+                      onClick={() => !isSubmitting && toggleTag(tag.name)}
+                      disabled={isSubmitting}
                       className={`${
                         tag.color
-                      } text-xs px-3 py-2 rounded-lg border transition-all duration-200 hover:scale-105 ${
+                      } text-xs px-3 py-2 rounded-lg border transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:pointer-events-none ${
                         formData.tags.some(tagObj => tagObj.name === tag.name)
                           ? "ring-2 ring-lime-400 ring-offset-1 shadow-md"
                           : "hover:shadow-sm"
@@ -459,18 +550,20 @@ export default function RecipeFormModal({
                 </div>
               </div>
             </div>
+
+            {/* Chef's Note */}
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Chef's Insites (Optional)
+                Chef's Insights (Optional)
               </label>
               <textarea
                 name="chef_note"
                 rows={4}
                 value={formData.chef_note}
                 onChange={handleChange}
-                required
-                className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm"
-                placeholder="Chef or Author suggestions regarding the recipe or any suggestions..."
+                disabled={isSubmitting}
+                className="w-full rounded-xl px-4 py-3 border border-zinc-300 bg-white shadow-sm resize-none focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm disabled:opacity-50"
+                placeholder="Chef or author suggestions regarding the recipe or any tips..."
               />
             </div>
 
@@ -478,17 +571,26 @@ export default function RecipeFormModal({
             <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-8 py-3 rounded-xl bg-zinc-200 hover:bg-zinc-300 transition text-sm font-medium"
+                onClick={handleClose}
+                disabled={isSubmitting}
+                className="px-8 py-3 rounded-xl bg-zinc-200 hover:bg-zinc-300 transition text-sm font-medium disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="px-8 py-3 rounded-xl bg-lime-500 hover:bg-lime-600 text-white transition text-sm font-medium shadow-lg hover:shadow-xl"
+                disabled={isSubmitting}
+                className="px-8 py-3 rounded-xl bg-lime-500 hover:bg-lime-600 text-white transition text-sm font-medium shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center gap-2"
               >
-                Save Recipe
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Recipe"
+                )}
               </button>
             </div>
           </div>

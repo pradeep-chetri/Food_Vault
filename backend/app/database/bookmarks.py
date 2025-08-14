@@ -1,14 +1,27 @@
+from time import time
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import selectinload
+
 from app.models.bookmark import Bookmark
 from app.models.recipe import Recipe
+
+from app.schemas.recipe import RecipeOut
+
+_bookmark_cache = {}
+_BOOKMARK_TTL = 300  # seconds
+
+def invalidate_bookmark_cache(email: str):
+    """Remove cached bookmarks for a given user."""
+    _bookmark_cache.pop(email, None)
 
 async def add_bookmark(db: AsyncSession, email: str, recipe_id: int):
     db_bookmark = Bookmark(email=email, recipe_id=recipe_id)
     db.add(db_bookmark)
     try:
         await db.commit()
+        invalidate_bookmark_cache(email)
         return True
     except Exception as e:
         await db.rollback()
@@ -25,6 +38,7 @@ async def remove_bookmark(db: AsyncSession, email: str, recipe_id: int):
             )
         )
         await db.commit()
+        invalidate_bookmark_cache(email)
         return True
     except Exception as e:
         await db.rollback()
@@ -32,25 +46,35 @@ async def remove_bookmark(db: AsyncSession, email: str, recipe_id: int):
 
 async def get_bookmarks_by_email(db: AsyncSession, email: str):
     try:
+        now = time()
+        print("Starting database")
+        
+        if email in _bookmark_cache:
+            data, ts = _bookmark_cache[email]
+            if now - ts < _BOOKMARK_TTL:
+                print(f"Serving bookmarks for {email} from cache")
+                return data
+
+        print(f"Fetching bookmarks for {email} from DB...")
+        
         stmt = (
             select(Recipe)
+            .options(
+                selectinload(Recipe.tags),
+                selectinload(Recipe.ingredients),
+                selectinload(Recipe.instructions),
+            )
             .join(Bookmark, Recipe.id == Bookmark.recipe_id)
             .filter(Bookmark.email == email)
         )
         result = await db.execute(stmt)
         recipes = result.scalars().unique().all()
 
-        result_list = []
-        for recipe in recipes:
-            tags = [tag.name.capitalize() for tag in recipe.tags]
-            result_list.append({
-                "id": recipe.id,
-                "title": recipe.title,
-                "image_url": recipe.image_url,
-                "description": recipe.description,
-                "author": recipe.author,
-                "tags": tags,
-            })
+        result_list = [RecipeOut.model_validate(recipe) for recipe in recipes]
+        
+        _bookmark_cache[email] = (result_list, now)
+        
+        print(result_list)
         return result_list
     except Exception as e:
         return {"error": str(e)}

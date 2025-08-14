@@ -12,12 +12,14 @@ router = APIRouter(prefix="/bookmarks", tags=["Bookmark"])
 
 
 # 🔹 GET /bookmarks
-router.get("", response_model=list[RecipeOut])
+@router.get("/", response_model=list[RecipeOut])
 async def get_bookmarks(
     db: AsyncSession = Depends(get_db),
     user: UserPublic = Depends(get_current_user)
 ):
+    print("Start fetching")
     result = await get_bookmarks_by_email(db, user.email)
+    print("fetched..")
     if isinstance(result, dict) and "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
     return result

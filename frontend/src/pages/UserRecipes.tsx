@@ -12,7 +12,7 @@ export default function UserRecipes() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const userRecipes = recipes.filter((r) => r.author === user?.name);
+  const userRecipes = recipes.filter((r) => r.author === user?.username);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -47,8 +47,8 @@ export default function UserRecipes() {
             Your Recipes
           </h1>
           <p className="text-slate-600 mt-2">
-            {user?.name
-              ? `Hey ${user.name}, here's your personal cookbook.`
+            {user?.username
+              ? `Hey ${user.username}, here's your personal cookbook.`
               : "Here's your personal recipe collection."}
           </p>
         </div>
