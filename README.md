@@ -35,6 +35,9 @@
 - Neon Postgresql
 - REST APIs for recipes, bookmarks, and user data  
 
+**Services**
+- ImageKit 
+
 ---
 
 ## 🗂️ Internal Structure
@@ -86,7 +89,7 @@ Built with ❤️ by [Pradeep](https://github.com/pradeep-chetri)
 
 - [ ] OAuth and more secure login system.  
 - [ ] Ingredient-based filtering & dark mode.
-- [ ] Image upload feature.
+- [*] Image upload feature.
 - [ ] Add more tags.
 - [ ] More features.
 - [ ] Blogs and artical space. 
