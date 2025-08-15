@@ -6,9 +6,9 @@
 
 ---
 
-## 🌍 Live Demo
+## 🌍 Live Now
 
-[[https://food-vault-pi.vercel.app/]]
+<a href="https://food-vault-pi.vercel.app/">Recipe Vault</a>
 
 ---
 
