@@ -8,7 +8,7 @@
 
 ## 🌍 Live Demo
 
-*🔗 Will be hosted soon after some updates *
+[[https://food-vault-pi.vercel.app/]]
 
 ---
 
