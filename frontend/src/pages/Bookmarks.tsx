@@ -17,7 +17,7 @@ export default function Bookmarks() {
       .filter((recipe) =>
         recipe.title.toLowerCase().includes(query) ||
         recipe.description.toLowerCase().includes(query) ||
-        recipe.tags.some((tag) => tag.toLowerCase().includes(query))
+        recipe.tags.some((tag) => tag.name.toLowerCase().includes(query))
       )
       .sort((a, b) => {
         switch (sortBy) {

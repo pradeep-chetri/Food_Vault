@@ -11,7 +11,6 @@ export default function Login() {
     email: "",
     password: "",
   });
-  const [userState, setUserState] = useState<Login | null>(null);
 
   const API = axios.create({
     baseURL: "http://localhost:8000/api",
@@ -64,9 +63,7 @@ export default function Login() {
     const token = localStorage.getItem("token");
     const cachedUser = localStorage.getItem("user");
 
-    if (cachedUser) {
-      setUserState(JSON.parse(cachedUser));
-    }
+    setUser(cachedUser ? JSON.parse(cachedUser) : null);
 
     if (token) {
       axios
@@ -74,13 +71,11 @@ export default function Login() {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {
-          setUserState(res.data);
           localStorage.setItem("user", JSON.stringify(res.data));
         })
         .catch(() => {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          setUserState(null);
         });
     }
   }, []);

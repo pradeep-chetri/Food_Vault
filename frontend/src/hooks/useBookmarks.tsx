@@ -15,7 +15,7 @@ export const useBookmarks = () => {
     const fetchData = async () => {
       setLoading(true); // ✅ Bug fix: should only trigger fetch loading if user is present
       try {
-        const data = await fetchBookmarks(user.email);
+        const data = await fetchBookmarks();
         setBookmarkedRecipes(data);
       } catch (err) {
         console.error("Fetch failed:", err);

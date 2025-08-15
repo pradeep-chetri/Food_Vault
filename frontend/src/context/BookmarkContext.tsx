@@ -17,7 +17,7 @@ export const BookmarkProvider = ({ children }: { children: React.ReactNode }) =>
   const refreshBookmarks = async () => {
     if (user?.email) {
       try {
-        const data = await fetchBookmarks(user.email);
+        const data = await fetchBookmarks();
         const ids = new Set(data.map((r) => r.id));
         setBookmarkedIds(ids);
       } catch (error) {

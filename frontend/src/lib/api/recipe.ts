@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { recipeCreateDataType, recipeDataType } from "../../types/recipeType";
+import type { recipeCreate, recipeDataType } from "../../types/recipeType";
 
 const API = axios.create({
   baseURL: "http://localhost:8000/api/recipes",
@@ -17,7 +17,7 @@ export async function fetchRecipeData(): Promise<recipeDataType[]>{
     return data
 }
 
-export async function submitNewRecipe(formData: recipeCreateDataType){
+export async function submitNewRecipe(formData: recipeCreate){
     const url = await API.post("/add", formData)
     return url.data
 }
