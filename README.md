@@ -8,7 +8,7 @@
 
 ## 🌍 Live Now
 
-<a href="https://food-vault-pi.vercel.app/">Recipe Vault</a>
+<a style="text-decoration:none; color: white; font-weight: 600; font-family: cursive" href="https://food-vault-pi.vercel.app/">Recipe Vault</a>
 
 ---
 
