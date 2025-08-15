@@ -1,14 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
-from .routes import recipe_router, user_router, bookmark_router, stats_router, image_router,health_router
-
+from app.routes import recipe_router, user_router, bookmark_router, stats_router, image_router, health_router
 
 app = FastAPI(title="Recipe Book API", version="0.1")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://food-vault-pi.vercel.app/"],
+    allow_origins=["https://food-vault-pi.vercel.app"],  # no trailing slash
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
