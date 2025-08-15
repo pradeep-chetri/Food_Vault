@@ -93,7 +93,7 @@ export default function ImageUploader({
         CustomHeader: 'CustomValue',
       };
 
-      const response = await axios.get('http://localhost:8000/api/image/upload', {
+      const response = await axios.get(`${import.meta.env.VITE_APP_API_URL}/image/upload`, {
         headers,
       });
 

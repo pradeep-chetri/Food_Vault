@@ -2,7 +2,7 @@ import axios from "axios";
 import type { recipeDataType } from "../../types/recipeType";
 
 const API = axios.create({
-  baseURL: "http://localhost:8000/api/bookmarks",
+  baseURL: `${import.meta.env.VITE_APP_API_URL}/bookmarks`,
 });
 
 // 🛡️ Attach token to each request

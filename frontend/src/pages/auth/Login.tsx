@@ -13,7 +13,7 @@ export default function Login() {
   });
 
   const API = axios.create({
-    baseURL: "http://localhost:8000/api",
+    baseURL: `${import.meta.env.VITE_APP_API_URL}`,
   });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -66,8 +66,8 @@ export default function Login() {
     setUser(cachedUser ? JSON.parse(cachedUser) : null);
 
     if (token) {
-      axios
-        .get("http://localhost:8000/api/auth/me", {
+      API
+        .get("/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((res) => {

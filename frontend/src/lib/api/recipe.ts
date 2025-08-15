@@ -2,7 +2,7 @@ import axios from "axios";
 import type { recipeCreate, recipeDataType } from "../../types/recipeType";
 
 const API = axios.create({
-  baseURL: "http://localhost:8000/api/recipes",
+  baseURL: `${import.meta.env.VITE_APP_API_URL}/recipes`,
 });
 
 export async function fetchRecipeData(): Promise<recipeDataType[]>{

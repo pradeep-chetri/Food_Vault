@@ -25,7 +25,7 @@ export default function SignUp() {
     e.preventDefault();
 
     try {
-      const api = axios.create({ baseURL: "http://localhost:8000/api" });
+      const api = axios.create({ baseURL: import.meta.env.VITE_APP_API_URL });
 
       // ✅ Sign up user
       const response = await api.post("/auth/signup", formData);
